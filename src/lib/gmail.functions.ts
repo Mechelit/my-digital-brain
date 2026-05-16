@@ -162,12 +162,14 @@ export const syncGmail = createServerFn({ method: "POST" })
 
         // Skip mails that clearly are not invoices (no amount AND no IBAN AND not a refund)
         if (!isRefund && parsed.amount == null && !parsed.iban) { skipped++; continue; }
+
+        await supabase.from("invoices").insert({
           user_id: userId,
           source: "email",
           status: "pending",
           is_refund: isRefund,
           external_id: `gmail:${messageId}`,
-          supplier: parsed.supplier ?? from.replace(/<.*>/, "").trim() ?? null,
+          supplier: supplierFinal,
           amount: parsed.amount ?? null,
           currency: parsed.currency ?? "EUR",
           iban: parsed.iban?.replace(/\s+/g, "").toUpperCase() ?? null,
