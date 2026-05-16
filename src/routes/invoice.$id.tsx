@@ -136,8 +136,11 @@ function InvoiceDetail() {
           <Field label="Leverancier">
             <Input value={form.supplier ?? ""} onChange={(e) => setForm({ ...form, supplier: e.target.value })} />
           </Field>
-          <Field label="Bedrag (€)">
-            <Input type="number" step="0.01" value={form.amount ?? ""} onChange={(e) => setForm({ ...form, amount: e.target.value ? parseFloat(e.target.value) : null })} />
+          <Field label={`Bedrag (${(form.currency || "EUR").toUpperCase()})`}>
+            <div className="flex gap-2">
+              <Input type="number" step="0.01" value={form.amount ?? ""} onChange={(e) => setForm({ ...form, amount: e.target.value ? parseFloat(e.target.value) : null })} className="flex-1" />
+              <Input value={form.currency ?? "EUR"} onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase().slice(0,3) })} className="w-20 font-mono uppercase" />
+            </div>
           </Field>
         </div>
         <Field label="IBAN">
