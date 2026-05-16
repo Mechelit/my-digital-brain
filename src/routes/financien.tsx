@@ -51,7 +51,16 @@ function FinancienPage() {
   });
 
   const totalBalance = (accounts.data ?? []).reduce((s, a: any) => s + Number(a.balance ?? 0), 0);
-  const totalRecurring = (recurring.data ?? []).reduce((s, r: any) => s + Number(r.amount), 0);
+  const monthlyEquivalent = (r: any) => {
+    const a = Number(r.amount);
+    switch (r.frequency ?? "monthly") {
+      case "quarterly": return a / 3;
+      case "biannual": return a / 6;
+      case "yearly": return a / 12;
+      default: return a;
+    }
+  };
+  const totalRecurring = (recurring.data ?? []).reduce((s, r: any) => s + monthlyEquivalent(r), 0);
   const totalDeposits = (deposits.data ?? []).reduce((s, d: any) => s + Number(d.amount), 0);
   const netWorth = totalBalance + totalDeposits;
 
@@ -93,10 +102,11 @@ function FinancienPage() {
 
       {/* Maandelijkse kosten */}
       <section>
-        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2"><Repeat className="w-4 h-4 text-primary" />Maandelijkse kosten</h2>
+        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2"><Repeat className="w-4 h-4 text-primary" />Vaste kosten</h2>
+        <p className="text-xs text-muted-foreground mb-3 px-1">Per kwartaal/jaar wordt omgerekend naar maandelijks equivalent.</p>
         {(["prive", "zakelijk"] as const).map((scope) => {
           const items = (recurring.data ?? []).filter((r: any) => (r.scope ?? "prive") === scope);
-          const subtotal = items.reduce((s, r: any) => s + Number(r.amount), 0);
+          const subtotal = items.reduce((s, r: any) => s + monthlyEquivalent(r), 0);
           return (
             <div key={scope} className="mb-5">
               <div className="flex items-baseline justify-between mb-2 px-1">
@@ -105,19 +115,33 @@ function FinancienPage() {
               </div>
               <div className="space-y-2">
                 {items.length === 0 && <p className="text-xs text-muted-foreground px-1 italic">Geen kosten</p>}
-                {items.map((r: any) => (
-                  <div key={r.id} className="glass-card rounded-xl p-4 flex items-center gap-4">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium">{r.name}</p>
-                      <p className="text-xs text-muted-foreground">Elke {r.day_of_month}{ord(r.day_of_month)} van de maand</p>
+                {items.map((r: any) => {
+                  const freq = r.frequency ?? "monthly";
+                  const freqLabel = freq === "monthly" ? "/maand" : freq === "quarterly" ? "/kwartaal" : freq === "biannual" ? "/halfjaar" : "/jaar";
+                  const monthly = monthlyEquivalent(r);
+                  return (
+                    <div key={r.id} className="glass-card rounded-xl p-4 flex items-center gap-4">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium">{r.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {freq === "monthly" && `Elke ${r.day_of_month}${ord(r.day_of_month)} v/d maand`}
+                          {freq === "quarterly" && `Per kwartaal · dag ${r.day_of_month}`}
+                          {freq === "biannual" && `2× per jaar · dag ${r.day_of_month}`}
+                          {freq === "yearly" && `Jaarlijks${r.month_of_year ? ` · ${monthName(r.month_of_year)}` : ""}`}
+                          {freq !== "monthly" && ` · ≈ ${fmt(monthly)}/maand`}
+                        </p>
+                      </div>
+                      <p className="tabular-nums font-semibold text-right">
+                        {fmt(Number(r.amount))}
+                        <span className="block text-[10px] font-normal text-muted-foreground">{freqLabel}</span>
+                      </p>
+                      <Button size="icon" variant="ghost" onClick={async () => {
+                        await supabase.from("recurring_expenses").delete().eq("id", r.id);
+                        qc.invalidateQueries({ queryKey: ["recurring"] });
+                      }}><Trash2 className="w-4 h-4" /></Button>
                     </div>
-                    <p className="tabular-nums font-semibold">{fmt(Number(r.amount))}</p>
-                    <Button size="icon" variant="ghost" onClick={async () => {
-                      await supabase.from("recurring_expenses").delete().eq("id", r.id);
-                      qc.invalidateQueries({ queryKey: ["recurring"] });
-                    }}><Trash2 className="w-4 h-4" /></Button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );
@@ -194,27 +218,42 @@ function AccountRow({ account, onChanged }: { account: any; onChanged: () => voi
   );
 }
 
+function monthName(m: number) {
+  return ["januari","februari","maart","april","mei","juni","juli","augustus","september","oktober","november","december"][m-1] ?? "";
+}
+
 function AddRecurring({ onAdded, userId }: { onAdded: () => void; userId?: string }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [day, setDay] = useState("1");
+  const [month, setMonth] = useState("1");
   const [scope, setScope] = useState<"prive" | "zakelijk">("prive");
+  const [frequency, setFrequency] = useState<"monthly"|"quarterly"|"biannual"|"yearly">("monthly");
   const add = useMutation({
     mutationFn: async () => {
       if (!userId) return;
       const { error } = await supabase.from("recurring_expenses").insert({
-        user_id: userId, name, amount: parseFloat(amount.replace(",", ".")), day_of_month: parseInt(day), scope,
+        user_id: userId,
+        name,
+        amount: parseFloat(amount.replace(",", ".")),
+        day_of_month: parseInt(day),
+        scope,
+        frequency,
+        month_of_year: frequency === "yearly" ? parseInt(month) : null,
       } as any);
       if (error) throw error;
     },
     onSuccess: () => {
-      setName(""); setAmount(""); setDay("1"); setScope("prive"); setOpen(false);
-      toast.success("Maandelijkse kost toegevoegd");
+      setName(""); setAmount(""); setDay("1"); setMonth("1"); setScope("prive"); setFrequency("monthly"); setOpen(false);
+      toast.success("Vaste kost toegevoegd");
       onAdded();
     },
   });
-  if (!open) return <Button variant="ghost" size="sm" className="mt-3" onClick={() => setOpen(true)}><Plus className="w-4 h-4 mr-1" />Maandelijkse kost</Button>;
+  if (!open) return <Button variant="ghost" size="sm" className="mt-3" onClick={() => setOpen(true)}><Plus className="w-4 h-4 mr-1" />Vaste kost</Button>;
+  const freqOpts: Array<["monthly"|"quarterly"|"biannual"|"yearly", string]> = [
+    ["monthly","Maandelijks"], ["quarterly","Per kwartaal"], ["biannual","2× per jaar"], ["yearly","Jaarlijks"],
+  ];
   return (
     <form onSubmit={(e) => { e.preventDefault(); add.mutate(); }} className="glass-card rounded-xl p-4 mt-3 space-y-3">
       <div className="flex gap-2">
@@ -224,10 +263,24 @@ function AddRecurring({ onAdded, userId }: { onAdded: () => void; userId?: strin
           </Button>
         ))}
       </div>
+      <div className="flex gap-2 flex-wrap">
+        {freqOpts.map(([f,label]) => (
+          <Button key={f} type="button" size="sm" variant={frequency === f ? "default" : "secondary"} onClick={() => setFrequency(f)}>
+            {label}
+          </Button>
+        ))}
+      </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="col-span-2"><Label>Naam</Label><Input value={name} onChange={(e) => setName(e.target.value)} required /></div>
-        <div><Label>Bedrag (€)</Label><Input value={amount} onChange={(e) => setAmount(e.target.value)} required /></div>
+        <div><Label>Bedrag (€) <span className="text-xs text-muted-foreground">per {frequency === "monthly" ? "maand" : frequency === "quarterly" ? "kwartaal" : frequency === "biannual" ? "halfjaar" : "jaar"}</span></Label><Input value={amount} onChange={(e) => setAmount(e.target.value)} required /></div>
         <div><Label>Dag van de maand</Label><Input type="number" min={1} max={31} value={day} onChange={(e) => setDay(e.target.value)} /></div>
+        {frequency === "yearly" && (
+          <div className="col-span-2"><Label>Maand</Label>
+            <select value={month} onChange={(e)=>setMonth(e.target.value)} className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm">
+              {Array.from({length:12},(_,i)=>i+1).map(m => <option key={m} value={m}>{monthName(m)}</option>)}
+            </select>
+          </div>
+        )}
       </div>
       <div className="flex gap-2"><Button type="submit" disabled={add.isPending}>Toevoegen</Button><Button type="button" variant="ghost" onClick={() => setOpen(false)}>Annuleren</Button></div>
     </form>

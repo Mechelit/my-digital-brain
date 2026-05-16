@@ -90,6 +90,7 @@ export type Database = {
           created_at: string
           currency: string | null
           due_date: string | null
+          external_id: string | null
           free_reference: string | null
           iban: string | null
           id: string
@@ -112,6 +113,7 @@ export type Database = {
           created_at?: string
           currency?: string | null
           due_date?: string | null
+          external_id?: string | null
           free_reference?: string | null
           iban?: string | null
           id?: string
@@ -134,6 +136,7 @@ export type Database = {
           created_at?: string
           currency?: string | null
           due_date?: string | null
+          external_id?: string | null
           free_reference?: string | null
           iban?: string | null
           id?: string
@@ -226,7 +229,9 @@ export type Database = {
           created_at: string
           currency: string
           day_of_month: number
+          frequency: Database["public"]["Enums"]["expense_frequency"]
           id: string
+          month_of_year: number | null
           name: string
           notes: string | null
           scope: Database["public"]["Enums"]["expense_scope"]
@@ -239,7 +244,9 @@ export type Database = {
           created_at?: string
           currency?: string
           day_of_month?: number
+          frequency?: Database["public"]["Enums"]["expense_frequency"]
           id?: string
+          month_of_year?: number | null
           name: string
           notes?: string | null
           scope?: Database["public"]["Enums"]["expense_scope"]
@@ -252,7 +259,9 @@ export type Database = {
           created_at?: string
           currency?: string
           day_of_month?: number
+          frequency?: Database["public"]["Enums"]["expense_frequency"]
           id?: string
+          month_of_year?: number | null
           name?: string
           notes?: string | null
           scope?: Database["public"]["Enums"]["expense_scope"]
@@ -269,6 +278,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      expense_frequency: "monthly" | "quarterly" | "biannual" | "yearly"
       expense_scope: "prive" | "zakelijk"
       invoice_source: "scan" | "upload" | "email" | "mobile_scan"
       invoice_status: "pending" | "confirmed" | "paid" | "archived"
@@ -399,6 +409,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      expense_frequency: ["monthly", "quarterly", "biannual", "yearly"],
       expense_scope: ["prive", "zakelijk"],
       invoice_source: ["scan", "upload", "email", "mobile_scan"],
       invoice_status: ["pending", "confirmed", "paid", "archived"],
