@@ -215,6 +215,15 @@ function AISection({ invoice, form, setForm, onUpdated }: { invoice: Invoice; fo
           {INVOICE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
       </Field>
+      <label className="flex items-center gap-3 px-1 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={!!form.is_refund}
+          onChange={(e) => setForm({ ...form, is_refund: e.target.checked })}
+          className="w-4 h-4 accent-primary"
+        />
+        <span className="text-sm">Dit is een <strong>terugbetaling / creditnota</strong> (geld komt binnen)</span>
+      </label>
       <Field label="Beschrijving">
         <textarea
           className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm min-h-[70px]"
