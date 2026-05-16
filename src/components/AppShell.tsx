@@ -16,6 +16,7 @@ const nav = [
   { to: "/inbox", icon: Inbox, label: "Mail-inbox" },
   { to: "/accounts", icon: Wallet, label: "Rekeningen" },
   { to: "/financien", icon: Coins, label: "Financiën" },
+  { to: "/contracten", icon: FileText, label: "Contracten" },
 ] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
