@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import { mobileGetSession, mobileScanExtract, mobileMarkPaid } from "@/lib/mobile-scan.functions";
 import { Camera, Loader2, Brain, Check, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatMoney } from "@/lib/format";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/m/$token")({ component: MobileScanPage });
