@@ -182,30 +182,26 @@ function ScanPage() {
           </button>
 
           <button
-            onClick={async () => {
-              try {
-                const items = await navigator.clipboard.read();
-                for (const item of items) {
-                  const imgType = item.types.find((t) => t.startsWith("image/"));
-                  if (imgType) {
-                    const blob = await item.getType(imgType);
-                    const file = new File([blob], `screenshot.${imgType.split("/")[1] || "png"}`, { type: imgType });
-                    toast.success("Screenshot geplakt");
-                    void handleFile(file);
-                    return;
-                  }
-                }
-                toast.error("Geen afbeelding op je klembord — maak eerst een screenshot");
-              } catch {
-                toast.error("Geen toegang tot klembord — gebruik Ctrl/Cmd+V");
-              }
-            }}
+            onClick={tryPasteScreenshot}
             className="glass-card rounded-2xl p-8 text-left hover:border-primary/40 transition-colors group"
           >
             <Clipboard className="w-8 h-8 text-primary mb-4" />
             <h2 className="font-semibold mb-1">Screenshot plakken</h2>
             <p className="text-sm text-muted-foreground">Knip met Win+Shift+S of Cmd+Shift+4, dan hier plakken.</p>
           </button>
+
+          {waitingPaste && (
+            <div
+              ref={pasteZoneRef}
+              tabIndex={0}
+              onBlur={() => setWaitingPaste(false)}
+              className="md:col-span-2 glass-card rounded-2xl p-8 text-center border-2 border-dashed border-primary/60 outline-none focus:border-primary"
+            >
+              <Clipboard className="w-8 h-8 text-primary mx-auto mb-3" />
+              <p className="font-medium mb-1">Druk nu Ctrl/Cmd+V</p>
+              <p className="text-sm text-muted-foreground">Je screenshot wordt automatisch ingelezen.</p>
+            </div>
+          )}
 
           <button
             type="button"
