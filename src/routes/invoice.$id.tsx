@@ -323,50 +323,46 @@ function InvoiceDetail() {
             </select>
           </Field>
         )}
-        <Button
-          variant="secondary"
-          className="w-full"
-          onClick={() => save.mutateAsync(form).then(() => toast.success("Opgeslagen"))}
-        >
-          Wijzigingen opslaan
-        </Button>
+        {!aiAccepted ? (
+          <Button
+            className="w-full h-12"
+            onClick={async () => {
+              await save.mutateAsync(form);
+              setAiAccepted(true);
+              toast.success("Gegevens bevestigd");
+            }}
+          >
+            <Check className="w-4 h-4 mr-2" />
+            Accepteer gegevens & ga naar betalen
+          </Button>
+        ) : (
+          <Button
+            variant="secondary"
+            className="w-full"
+            onClick={() => save.mutateAsync(form).then(() => toast.success("Opgeslagen"))}
+          >
+            Wijzigingen opslaan
+          </Button>
+        )}
       </div>
 
-      <div className="glass-card rounded-2xl p-6 mt-4 space-y-4">
-        <div>
-          <h2 className="font-semibold mb-1">Bevestig & betaal</h2>
-          <p className="text-sm text-muted-foreground">
-            {accounts.length === 0
-              ? "Voeg eerst een rekening toe om bij te houden waarvandaan je betaalt."
-              : "Kies de rekening waarvandaan je betaalt en bevestig."}
-          </p>
-        </div>
-        {accounts.length > 0 && (
-          <Field label="Betaald vanaf rekening">
-            <select
-              className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm"
-              value={form.paid_from_account ?? accounts.find((a) => a.is_default)?.id ?? accounts[0]?.id ?? ""}
-              onChange={(e) => setForm({ ...form, paid_from_account: e.target.value || null })}
-              disabled={invoice.status === "paid"}
-            >
-              {accounts.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                  {a.iban ? ` · ${a.iban}` : ""}
-                </option>
-              ))}
-            </select>
-          </Field>
-        )}
+      {invoice.status !== "paid" && !form.is_refund && aiAccepted && (
         <Button
-          className="w-full glow-ring"
-          disabled={invoice.status === "paid"}
-          onClick={confirmAndPay}
+          size="lg"
+          className="w-full h-14 text-base glow-ring mt-6"
+          onClick={() => setPayOpen(true)}
         >
-          <Check className="w-4 h-4 mr-2" />
-          {invoice.status === "paid" ? "Al betaald" : "Markeer als betaald"}
+          <CreditCard className="w-5 h-5 mr-2" />
+          Betaal {form.amount != null ? formatWithEuroEstimate(form.amount as any, form.currency) : ""}
         </Button>
-      </div>
+      )}
+
+      {invoice.status === "paid" && (
+        <div className="glass-card rounded-2xl p-6 mt-6 text-center">
+          <Check className="w-6 h-6 text-emerald-400 mx-auto mb-2" />
+          <p className="font-medium">Betaald</p>
+        </div>
+      )}
     </div>
   );
 }
