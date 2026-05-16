@@ -157,17 +157,6 @@ function InvoiceDetail() {
         </div>
       </div>
 
-      {invoice.status !== "paid" && !form.is_refund && (
-        <Button
-          size="lg"
-          className="w-full h-14 text-base glow-ring mb-6"
-          onClick={() => setPayOpen(true)}
-        >
-          <CreditCard className="w-5 h-5 mr-2" />
-          Betaal {form.amount != null ? formatWithEuroEstimate(form.amount as any, form.currency) : ""}
-        </Button>
-      )}
-
       <PayDialog
         open={payOpen}
         onOpenChange={setPayOpen}
