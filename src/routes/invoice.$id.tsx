@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Check, Trash2, Sparkles, ExternalLink, Loader2 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import { categorizeInvoice, INVOICE_CATEGORIES } from "@/lib/invoice-ai.functions";
-import { formatMoney } from "@/lib/format";
+import { estimateEuro, formatMoney, formatWithEuroEstimate } from "@/lib/format";
 
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 type Account = Database["public"]["Tables"]["accounts"]["Row"];
@@ -98,7 +98,7 @@ function InvoiceDetail() {
             {form.supplier || "Naam ontbreekt"}
             {form.amount != null ? (
               <span className={`ml-3 text-xl ${form.is_refund ? "text-emerald-400" : "text-muted-foreground"}`}>
-                {form.is_refund ? "+" : ""}{formatMoney(form.amount as any, form.currency)}
+                {form.is_refund ? "+" : ""}{formatWithEuroEstimate(form.amount as any, form.currency)}
               </span>
             ) : null}
           </h1>
@@ -140,6 +140,9 @@ function InvoiceDetail() {
             <div className="flex gap-2">
               <Input type="number" step="0.01" value={form.amount ?? ""} onChange={(e) => setForm({ ...form, amount: e.target.value ? parseFloat(e.target.value) : null })} className="flex-1" />
               <Input value={form.currency ?? "EUR"} onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase().slice(0,3) })} className="w-20 font-mono uppercase" />
+              {(form.currency || "EUR").toUpperCase() !== "EUR" && form.amount != null ? (
+                <span className="self-center whitespace-nowrap text-xs text-muted-foreground">≈ {formatMoney(estimateEuro(form.amount as any, form.currency), "EUR")}</span>
+              ) : null}
             </div>
           </Field>
         </div>
