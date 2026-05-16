@@ -25,11 +25,43 @@ function Index() {
 
 function Dashboard() {
   const { user } = useAuth();
+  const qc = useQueryClient();
   const [now, setNow] = useState(new Date());
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(t);
   }, []);
+
+  const toggleSelect = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const deleteSelected = async () => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    if (!confirm(`${ids.length} factu${ids.length === 1 ? "ur" : "ren"} verwijderen?`)) return;
+    const { data: rows } = await supabase
+      .from("invoices")
+      .select("scan_path")
+      .in("id", ids);
+    const paths = (rows ?? []).map((r) => r.scan_path).filter((p): p is string => !!p);
+    if (paths.length) await supabase.storage.from("invoice-scans").remove(paths);
+    const { error } = await supabase.from("invoices").delete().in("id", ids);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`${ids.length} verwijderd`);
+    setSelected(new Set());
+    setSelectMode(false);
+    qc.invalidateQueries({ queryKey: ["invoices"] });
+  };
 
   const { data: invoices = [] } = useQuery({
     queryKey: ["invoices", user?.id],
