@@ -18,6 +18,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as MTokenRouteImport } from './routes/m.$token'
 import { Route as InvoiceIdRouteImport } from './routes/invoice.$id'
 import { Route as ScanDesktopTokenRouteImport } from './routes/scan.desktop.$token'
+import { Route as ApiPublicHooksSyncGmailRouteImport } from './routes/api/public/hooks/sync-gmail'
 
 const ScanRoute = ScanRouteImport.update({
   id: '/scan',
@@ -64,6 +65,11 @@ const ScanDesktopTokenRoute = ScanDesktopTokenRouteImport.update({
   path: '/desktop/$token',
   getParentRoute: () => ScanRoute,
 } as any)
+const ApiPublicHooksSyncGmailRoute = ApiPublicHooksSyncGmailRouteImport.update({
+  id: '/api/public/hooks/sync-gmail',
+  path: '/api/public/hooks/sync-gmail',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -75,6 +81,7 @@ export interface FileRoutesByFullPath {
   '/invoice/$id': typeof InvoiceIdRoute
   '/m/$token': typeof MTokenRoute
   '/scan/desktop/$token': typeof ScanDesktopTokenRoute
+  '/api/public/hooks/sync-gmail': typeof ApiPublicHooksSyncGmailRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByTo {
   '/invoice/$id': typeof InvoiceIdRoute
   '/m/$token': typeof MTokenRoute
   '/scan/desktop/$token': typeof ScanDesktopTokenRoute
+  '/api/public/hooks/sync-gmail': typeof ApiPublicHooksSyncGmailRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -98,6 +106,7 @@ export interface FileRoutesById {
   '/invoice/$id': typeof InvoiceIdRoute
   '/m/$token': typeof MTokenRoute
   '/scan/desktop/$token': typeof ScanDesktopTokenRoute
+  '/api/public/hooks/sync-gmail': typeof ApiPublicHooksSyncGmailRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -111,6 +120,7 @@ export interface FileRouteTypes {
     | '/invoice/$id'
     | '/m/$token'
     | '/scan/desktop/$token'
+    | '/api/public/hooks/sync-gmail'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -122,6 +132,7 @@ export interface FileRouteTypes {
     | '/invoice/$id'
     | '/m/$token'
     | '/scan/desktop/$token'
+    | '/api/public/hooks/sync-gmail'
   id:
     | '__root__'
     | '/'
@@ -133,6 +144,7 @@ export interface FileRouteTypes {
     | '/invoice/$id'
     | '/m/$token'
     | '/scan/desktop/$token'
+    | '/api/public/hooks/sync-gmail'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -144,6 +156,7 @@ export interface RootRouteChildren {
   ScanRoute: typeof ScanRouteWithChildren
   InvoiceIdRoute: typeof InvoiceIdRoute
   MTokenRoute: typeof MTokenRoute
+  ApiPublicHooksSyncGmailRoute: typeof ApiPublicHooksSyncGmailRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -211,6 +224,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ScanDesktopTokenRouteImport
       parentRoute: typeof ScanRoute
     }
+    '/api/public/hooks/sync-gmail': {
+      id: '/api/public/hooks/sync-gmail'
+      path: '/api/public/hooks/sync-gmail'
+      fullPath: '/api/public/hooks/sync-gmail'
+      preLoaderRoute: typeof ApiPublicHooksSyncGmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -233,7 +253,18 @@ const rootRouteChildren: RootRouteChildren = {
   ScanRoute: ScanRouteWithChildren,
   InvoiceIdRoute: InvoiceIdRoute,
   MTokenRoute: MTokenRoute,
+  ApiPublicHooksSyncGmailRoute: ApiPublicHooksSyncGmailRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
