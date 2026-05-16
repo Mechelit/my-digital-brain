@@ -32,6 +32,7 @@ function InvoiceDetail() {
   const qc = useQueryClient();
   const [form, setForm] = useState<Partial<Invoice>>({});
   const [scanUrl, setScanUrl] = useState<string | null>(null);
+  const [payOpen, setPayOpen] = useState(false);
 
   const { data: invoice } = useQuery({
     queryKey: ["invoice", id],
