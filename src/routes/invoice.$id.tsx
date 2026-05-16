@@ -323,19 +323,11 @@ function InvoiceDetail() {
             </select>
           </Field>
         )}
-        {!aiAccepted ? (
-          <Button
-            className="w-full h-12"
-            onClick={async () => {
-              await save.mutateAsync(form);
-              setAiAccepted(true);
-              toast.success("Gegevens bevestigd");
-            }}
-          >
-            <Check className="w-4 h-4 mr-2" />
-            Accepteer gegevens & ga naar betalen
+        {invoice.status === "paid" ? (
+          <Button variant="secondary" className="w-full" disabled>
+            <Check className="w-4 h-4 mr-2" /> Al betaald
           </Button>
-        ) : (
+        ) : form.is_refund ? (
           <Button
             variant="secondary"
             className="w-full"
@@ -343,19 +335,21 @@ function InvoiceDetail() {
           >
             Wijzigingen opslaan
           </Button>
+        ) : (
+          <Button
+            size="lg"
+            className="w-full h-14 text-base glow-ring"
+            onClick={async () => {
+              await save.mutateAsync(form);
+              setAiAccepted(true);
+              setPayOpen(true);
+            }}
+          >
+            <CreditCard className="w-5 h-5 mr-2" />
+            Betaal {form.amount != null ? formatWithEuroEstimate(form.amount as any, form.currency) : ""}
+          </Button>
         )}
       </div>
-
-      {invoice.status !== "paid" && !form.is_refund && aiAccepted && (
-        <Button
-          size="lg"
-          className="w-full h-14 text-base glow-ring mt-6"
-          onClick={() => setPayOpen(true)}
-        >
-          <CreditCard className="w-5 h-5 mr-2" />
-          Betaal {form.amount != null ? formatWithEuroEstimate(form.amount as any, form.currency) : ""}
-        </Button>
-      )}
 
       {invoice.status === "paid" && (
         <div className="glass-card rounded-2xl p-6 mt-6 text-center">
