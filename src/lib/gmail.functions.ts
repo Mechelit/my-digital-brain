@@ -88,11 +88,23 @@ export const syncGmail = createServerFn({ method: "POST" })
     let skipped = 0;
     const errors: string[] = [];
 
+    // Load ignore lists once
+    const [{ data: ignoredEmails }, { data: ignoredSuppliers }] = await Promise.all([
+      supabase.from("ignored_emails").select("external_id").eq("user_id", userId),
+      supabase.from("ignored_suppliers").select("pattern").eq("user_id", userId),
+    ]);
+    const ignoredExternalIds = new Set((ignoredEmails ?? []).map((r: any) => r.external_id));
+    const ignoredPatterns: string[] = (ignoredSuppliers ?? []).map((r: any) => (r.pattern ?? "").toLowerCase()).filter(Boolean);
+    const matchesIgnoredSupplier = (...fields: (string | null | undefined)[]) =>
+      ignoredPatterns.some((p) => fields.some((f) => f && f.toLowerCase().includes(p)));
+
     for (const messageId of ids) {
       try {
+        const externalId = `gmail:${messageId}`;
+        if (ignoredExternalIds.has(externalId)) { skipped++; continue; }
         // Dedupe
         const { data: existing } = await supabase
-          .from("invoices").select("id").eq("user_id", userId).eq("external_id", `gmail:${messageId}`).maybeSingle();
+          .from("invoices").select("id").eq("user_id", userId).eq("external_id", externalId).maybeSingle();
         if (existing) { skipped++; continue; }
 
         const msg = await gmailFetch(`/users/me/messages/${messageId}?format=full`);
