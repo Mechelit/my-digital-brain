@@ -14,7 +14,169 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      accounts: {
+        Row: {
+          created_at: string
+          iban: string | null
+          id: string
+          is_default: boolean
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          iban?: string | null
+          id?: string
+          is_default?: boolean
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          iban?: string | null
+          id?: string
+          is_default?: boolean
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      invoices: {
+        Row: {
+          amount: number | null
+          bic: string | null
+          created_at: string
+          currency: string | null
+          due_date: string | null
+          free_reference: string | null
+          iban: string | null
+          id: string
+          invoice_date: string | null
+          notes: string | null
+          paid_at: string | null
+          paid_from_account: string | null
+          raw_extraction: Json | null
+          scan_path: string | null
+          source: Database["public"]["Enums"]["invoice_source"]
+          status: Database["public"]["Enums"]["invoice_status"]
+          structured_reference: string | null
+          supplier: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number | null
+          bic?: string | null
+          created_at?: string
+          currency?: string | null
+          due_date?: string | null
+          free_reference?: string | null
+          iban?: string | null
+          id?: string
+          invoice_date?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          paid_from_account?: string | null
+          raw_extraction?: Json | null
+          scan_path?: string | null
+          source?: Database["public"]["Enums"]["invoice_source"]
+          status?: Database["public"]["Enums"]["invoice_status"]
+          structured_reference?: string | null
+          supplier?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number | null
+          bic?: string | null
+          created_at?: string
+          currency?: string | null
+          due_date?: string | null
+          free_reference?: string | null
+          iban?: string | null
+          id?: string
+          invoice_date?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          paid_from_account?: string | null
+          raw_extraction?: Json | null
+          scan_path?: string | null
+          source?: Database["public"]["Enums"]["invoice_source"]
+          status?: Database["public"]["Enums"]["invoice_status"]
+          structured_reference?: string | null
+          supplier?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_paid_from_account_fkey"
+            columns: ["paid_from_account"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mobile_scan_sessions: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          invoice_id: string | null
+          status: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          invoice_id?: string | null
+          status?: string
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          invoice_id?: string | null
+          status?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mobile_scan_sessions_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          inbox_alias: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id: string
+          inbox_alias?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          inbox_alias?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +185,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      invoice_source: "scan" | "upload" | "email" | "mobile_scan"
+      invoice_status: "pending" | "confirmed" | "paid" | "archived"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +313,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      invoice_source: ["scan", "upload", "email", "mobile_scan"],
+      invoice_status: ["pending", "confirmed", "paid", "archived"],
+    },
   },
 } as const
