@@ -92,8 +92,11 @@ function InvoiceDetail() {
 
       <div className="flex items-start justify-between mb-6">
         <div>
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Factuur</p>
-          <h1 className="text-3xl font-semibold tracking-tight mt-1">{form.supplier || "Naam ontbreekt"}</h1>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">{form.is_refund ? "Terugbetaling / Creditnota" : "Factuur"}</p>
+          <h1 className="text-3xl font-semibold tracking-tight mt-1">
+            {form.supplier || "Naam ontbreekt"}
+            {form.is_refund && form.amount ? <span className="ml-3 text-emerald-400 text-xl">+€{Number(form.amount).toFixed(2)}</span> : null}
+          </h1>
         </div>
         <Button size="sm" variant="ghost" onClick={del}><Trash2 className="w-4 h-4" /></Button>
       </div>
