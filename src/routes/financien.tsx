@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Wallet, Repeat, Lock, Plus, Trash2, Pencil, Check, X } from "lucide-react";
+import { Wallet, Repeat, Lock, Plus, Trash2, Pencil, Check, X, PieChart } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/financien")({
