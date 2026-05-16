@@ -1,7 +1,7 @@
 import type { Database } from "@/integrations/supabase/types";
 import { Link } from "@tanstack/react-router";
 import { Calendar, FileText } from "lucide-react";
-import { formatMoney } from "@/lib/format";
+import { formatWithEuroEstimate } from "@/lib/format";
 
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 
@@ -48,7 +48,7 @@ export function InvoiceCard({ invoice }: { invoice: Invoice }) {
       </div>
       <div className="text-right">
         <p className="font-semibold tabular-nums">
-          {formatMoney(invoice.amount as any, invoice.currency)}
+          {formatWithEuroEstimate(invoice.amount as any, invoice.currency)}
         </p>
       </div>
     </Link>

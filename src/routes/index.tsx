@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Camera, Sparkles } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import type { Database } from "@/integrations/supabase/types";
+import { estimateEuro, formatMoney } from "@/lib/format";
 
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 
@@ -45,7 +46,7 @@ function Dashboard() {
 
   const pending = invoices.filter((i) => i.status === "pending" || i.status === "confirmed");
   const paid = invoices.filter((i) => i.status === "paid");
-  const totalDue = pending.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  const totalDue = pending.reduce((s, i) => s + (estimateEuro(i.amount as any, i.currency) ?? 0), 0);
 
   const hour = now.getHours();
   const greeting = hour < 6 ? "Goeienacht" : hour < 12 ? "Goeiemorgen" : hour < 18 ? "Hallo" : "Goeienavond";
@@ -63,7 +64,7 @@ function Dashboard() {
       <section className="grid grid-cols-2 gap-3 mb-10">
         <div className="glass-card rounded-2xl p-5">
           <p className="text-xs uppercase tracking-wider text-muted-foreground">Openstaand</p>
-          <p className="text-2xl font-semibold mt-2 tabular-nums">€ {totalDue.toFixed(2)}</p>
+          <p className="text-2xl font-semibold mt-2 tabular-nums">{formatMoney(totalDue, "EUR")}</p>
           <p className="text-xs text-muted-foreground mt-1">{pending.length} {pending.length === 1 ? "factuur" : "facturen"}</p>
         </div>
         <div className="glass-card rounded-2xl p-5">
