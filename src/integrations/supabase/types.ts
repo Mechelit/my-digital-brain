@@ -180,6 +180,7 @@ export type Database = {
         Row: {
           ai_description: string | null
           amount: number | null
+          auto_paid: boolean
           bic: string | null
           category: string | null
           created_at: string
@@ -206,6 +207,7 @@ export type Database = {
         Insert: {
           ai_description?: string | null
           amount?: number | null
+          auto_paid?: boolean
           bic?: string | null
           category?: string | null
           created_at?: string
@@ -232,6 +234,7 @@ export type Database = {
         Update: {
           ai_description?: string | null
           amount?: number | null
+          auto_paid?: boolean
           bic?: string | null
           category?: string | null
           created_at?: string
