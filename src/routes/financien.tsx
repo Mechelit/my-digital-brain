@@ -107,7 +107,13 @@ function FinancienPage() {
         return a;
     }
   };
-  const totalRecurring = (recurring.data ?? []).reduce((s, r: any) => s + monthlyEquivalent(r), 0);
+  const recurringPrive = (recurring.data ?? [])
+    .filter((r: any) => (r.scope ?? "prive") === "prive")
+    .reduce((s, r: any) => s + monthlyEquivalent(r), 0);
+  const recurringZakelijk = (recurring.data ?? [])
+    .filter((r: any) => r.scope === "zakelijk")
+    .reduce((s, r: any) => s + monthlyEquivalent(r), 0);
+  const totalRecurring = recurringPrive + recurringZakelijk;
   const totalDeposits = (deposits.data ?? []).reduce((s, d: any) => s + Number(d.amount), 0);
   const netWorth = totalBalance + totalDeposits;
 
