@@ -142,9 +142,16 @@ function InvoiceDetail() {
             ) : null}
           </h1>
         </div>
-        <Button size="sm" variant="ghost" onClick={del}>
-          <Trash2 className="w-4 h-4" />
-        </Button>
+        <div className="flex gap-1">
+          {invoice.source === "email" && (
+            <Button size="sm" variant="ghost" onClick={ignoreSender} title="Afzender voortaan negeren">
+              Negeer afzender
+            </Button>
+          )}
+          <Button size="sm" variant="ghost" onClick={del}>
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       {scanUrl &&
