@@ -85,8 +85,10 @@ export type Database = {
       }
       invoices: {
         Row: {
+          ai_description: string | null
           amount: number | null
           bic: string | null
+          category: string | null
           created_at: string
           currency: string | null
           due_date: string | null
@@ -108,8 +110,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ai_description?: string | null
           amount?: number | null
           bic?: string | null
+          category?: string | null
           created_at?: string
           currency?: string | null
           due_date?: string | null
@@ -131,8 +135,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ai_description?: string | null
           amount?: number | null
           bic?: string | null
+          category?: string | null
           created_at?: string
           currency?: string | null
           due_date?: string | null

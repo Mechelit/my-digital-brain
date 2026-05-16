@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Wallet, Repeat, Lock, Plus, Trash2, Pencil, Check, X } from "lucide-react";
+import { Wallet, Repeat, Lock, Plus, Trash2, Pencil, Check, X, PieChart } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/financien")({
@@ -49,6 +49,33 @@ function FinancienPage() {
       return data ?? [];
     },
   });
+
+  const paidInvoices = useQuery({
+    queryKey: ["paid-invoices-by-cat"],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("invoices")
+        .select("id,supplier,amount,category,paid_at")
+        .eq("status", "paid")
+        .not("amount", "is", null);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const byCategory = (() => {
+    const m = new Map<string, { total: number; count: number }>();
+    for (const inv of paidInvoices.data ?? []) {
+      const cat = (inv as any).category || "Niet gecategoriseerd";
+      const cur = m.get(cat) ?? { total: 0, count: 0 };
+      cur.total += Number((inv as any).amount ?? 0);
+      cur.count += 1;
+      m.set(cat, cur);
+    }
+    return [...m.entries()].sort((a, b) => b[1].total - a[1].total);
+  })();
+  const totalSpent = byCategory.reduce((s, [, v]) => s + v.total, 0);
 
   const totalBalance = (accounts.data ?? []).reduce((s, a: any) => s + Number(a.balance ?? 0), 0);
   const monthlyEquivalent = (r: any) => {
@@ -172,6 +199,41 @@ function FinancienPage() {
           </div>
         </div>
         <AddDeposit onAdded={() => qc.invalidateQueries({ queryKey: ["deposits"] })} userId={user?.id} />
+      </section>
+
+      {/* Uitgaven per categorie */}
+      <section>
+        <h2 className="text-lg font-semibold mb-1 flex items-center gap-2"><PieChart className="w-4 h-4 text-primary" />Uitgaven per categorie</h2>
+        <p className="text-xs text-muted-foreground mb-3">Op basis van betaalde facturen, automatisch gecategoriseerd door AI.</p>
+        {byCategory.length === 0 ? (
+          <div className="glass-card rounded-xl p-4 text-sm text-muted-foreground">
+            Nog geen betaalde facturen. Open een factuur en klik "Analyseer" om te categoriseren.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {byCategory.map(([cat, v]) => {
+              const pct = totalSpent ? (v.total / totalSpent) * 100 : 0;
+              return (
+                <div key={cat} className="glass-card rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <p className="text-sm font-medium">{cat}</p>
+                      <p className="text-xs text-muted-foreground">{v.count} {v.count === 1 ? "factuur" : "facturen"}</p>
+                    </div>
+                    <p className="tabular-nums font-semibold">{fmt(v.total)}</p>
+                  </div>
+                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+            <div className="flex justify-between px-2 pt-2 text-sm">
+              <span className="text-muted-foreground">Totaal uitgegeven</span>
+              <span className="font-semibold tabular-nums">{fmt(totalSpent)}</span>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

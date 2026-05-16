@@ -1,14 +1,16 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowLeft, Check, Trash2, FileText } from "lucide-react";
+import { ArrowLeft, Check, Trash2, Sparkles, ExternalLink } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
+import { categorizeInvoice, INVOICE_CATEGORIES } from "@/lib/invoice-ai.functions";
 
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 type Account = Database["public"]["Tables"]["accounts"]["Row"];
@@ -97,11 +99,18 @@ function InvoiceDetail() {
       </div>
 
       {scanUrl && (
-        <a href={scanUrl} target="_blank" rel="noreferrer" className="glass-card rounded-2xl p-4 mb-6 flex items-center gap-3 hover:border-primary/40 transition-colors">
-          <FileText className="w-5 h-5 text-primary" />
-          <span className="text-sm">Originele scan bekijken</span>
-        </a>
+        <div className="glass-card rounded-2xl p-3 mb-6 space-y-2">
+          <div className="flex items-center justify-between px-2">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">Originele scan</p>
+            <a href={scanUrl} target="_blank" rel="noreferrer" className="text-xs text-primary flex items-center gap-1 hover:underline">
+              Openen <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+          <iframe src={scanUrl} className="w-full h-[420px] rounded-xl bg-background" title="Factuur scan" />
+        </div>
       )}
+
+      <AISection invoice={invoice} onUpdated={() => qc.invalidateQueries({ queryKey: ["invoice", id] })} form={form} setForm={setForm} />
 
       <div className="glass-card rounded-2xl p-6 space-y-4">
         <div className="grid grid-cols-2 gap-4">
@@ -169,6 +178,51 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <div className="space-y-1.5">
       <Label className="text-xs text-muted-foreground">{label}</Label>
       {children}
+    </div>
+  );
+}
+
+function AISection({ invoice, form, setForm, onUpdated }: { invoice: Invoice; form: Partial<Invoice>; setForm: (f: Partial<Invoice>) => void; onUpdated: () => void }) {
+  const runAI = useServerFn(categorizeInvoice);
+  const mut = useMutation({
+    mutationFn: () => runAI({ data: { id: invoice.id } }),
+    onSuccess: (r) => {
+      setForm({ ...form, category: r.category, ai_description: r.description });
+      onUpdated();
+      toast.success("AI-analyse klaar");
+    },
+    onError: (e: any) => toast.error(e.message ?? "AI-analyse mislukt"),
+  });
+
+  return (
+    <div className="glass-card rounded-2xl p-6 mb-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-primary" />
+          <h2 className="font-semibold">AI-analyse</h2>
+        </div>
+        <Button size="sm" variant="secondary" onClick={() => mut.mutate()} disabled={mut.isPending}>
+          {mut.isPending ? "Analyseren..." : invoice.ai_description ? "Opnieuw" : "Analyseer"}
+        </Button>
+      </div>
+      <Field label="Categorie">
+        <select
+          className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm"
+          value={form.category ?? ""}
+          onChange={(e) => setForm({ ...form, category: e.target.value || null })}
+        >
+          <option value="">— Geen categorie —</option>
+          {INVOICE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </Field>
+      <Field label="Beschrijving">
+        <textarea
+          className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm min-h-[70px]"
+          value={form.ai_description ?? ""}
+          onChange={(e) => setForm({ ...form, ai_description: e.target.value })}
+          placeholder="Korte uitleg waar de betaling voor is..."
+        />
+      </Field>
     </div>
   );
 }
