@@ -102,6 +102,7 @@ export type Database = {
           name: string
           notes: string | null
           paid_at: string | null
+          scan_path: string | null
           updated_at: string
           user_id: string
         }
@@ -114,6 +115,7 @@ export type Database = {
           name: string
           notes?: string | null
           paid_at?: string | null
+          scan_path?: string | null
           updated_at?: string
           user_id: string
         }
@@ -126,6 +128,7 @@ export type Database = {
           name?: string
           notes?: string | null
           paid_at?: string | null
+          scan_path?: string | null
           updated_at?: string
           user_id?: string
         }

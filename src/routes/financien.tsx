@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Wallet, Repeat, Lock, Plus, Trash2, Pencil, Check, X, PieChart } from "lucide-react";
+import { Wallet, Repeat, Lock, Plus, Trash2, Pencil, Check, X, PieChart, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { estimateEuro, formatMoney } from "@/lib/format";
 
@@ -250,6 +250,25 @@ function FinancienPage() {
                 )}
               </div>
               <p className="tabular-nums font-semibold">{fmt(Number(d.amount))}</p>
+              {d.scan_path && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  title="Bekijk document"
+                  onClick={async () => {
+                    const { data, error } = await supabase.storage
+                      .from("invoice-scans")
+                      .createSignedUrl(d.scan_path, 60);
+                    if (error || !data?.signedUrl) {
+                      toast.error("Kon document niet openen");
+                      return;
+                    }
+                    window.open(data.signedUrl, "_blank");
+                  }}
+                >
+                  <FileText className="w-4 h-4" />
+                </Button>
+              )}
               <Button
                 size="icon"
                 variant="ghost"

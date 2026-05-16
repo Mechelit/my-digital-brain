@@ -1,0 +1,1 @@
+ALTER TABLE public.deposits ADD COLUMN IF NOT EXISTS scan_path text;
