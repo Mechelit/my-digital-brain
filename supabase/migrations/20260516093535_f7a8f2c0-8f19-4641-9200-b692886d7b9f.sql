@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.remember_deleted_invoice() FROM PUBLIC, anon, authenticated;
