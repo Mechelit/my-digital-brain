@@ -113,6 +113,9 @@ export const syncGmail = createServerFn({ method: "POST" })
         const from = headers.find((h: any) => h.name?.toLowerCase() === "from")?.value ?? "";
         const isDoccle = /doccle/i.test(from) || /doccle/i.test(subject);
 
+        // Skip if sender/subject matches an ignored supplier (e.g. KBC overzichten)
+        if (matchesIgnoredSupplier(from, subject)) { skipped++; continue; }
+
         const pdfs = findPdfParts(msg.payload);
         if (pdfs.length === 0 && !isDoccle) { skipped++; continue; }
 
