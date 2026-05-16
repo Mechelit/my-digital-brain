@@ -227,28 +227,7 @@ function ContractsPage() {
             <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-3">{group.label}</h2>
             <div className="space-y-2">
               {group.items.map((c) => (
-                <div key={c.id} className="glass-card rounded-xl p-4 flex items-center gap-4">
-                  <FileText className="w-5 h-5 text-primary shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{c.name}</div>
-                    <div className="text-xs text-muted-foreground truncate">
-                      {[
-                        c.counterparty,
-                        c.monthly_amount ? `${formatMoney(Number(c.monthly_amount), c.currency)}/maand` : null,
-                        c.start_date ? `vanaf ${c.start_date}` : null,
-                        c.end_date ? `tot ${c.end_date}` : null,
-                      ].filter(Boolean).join(" · ")}
-                    </div>
-                  </div>
-                  {c.file_path && (
-                    <Button size="sm" variant="ghost" onClick={() => openFile(c.file_path!)}>
-                      <ExternalLink className="w-4 h-4" />
-                    </Button>
-                  )}
-                  <Button size="sm" variant="ghost" onClick={() => del(c)}>
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
+                <ContractRow key={c.id} contract={c} onOpen={openFile} onDelete={del} userId={user?.id} onUploaded={() => qc.invalidateQueries({ queryKey: ["contracts"] })} />
               ))}
             </div>
           </section>
