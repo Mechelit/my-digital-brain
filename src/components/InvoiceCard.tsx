@@ -1,6 +1,6 @@
 import type { Database } from "@/integrations/supabase/types";
 import { Link } from "@tanstack/react-router";
-import { Calendar, FileText } from "lucide-react";
+import { Calendar, FileText, Check } from "lucide-react";
 import { formatWithEuroEstimate } from "@/lib/format";
 
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
@@ -18,18 +18,39 @@ const statusLabel: Record<string, string> = {
   archived: "Archief",
 };
 
-export function InvoiceCard({ invoice }: { invoice: Invoice }) {
+export function InvoiceCard({
+  invoice,
+  selectable,
+  selected,
+  onToggleSelect,
+}: {
+  invoice: Invoice;
+  selectable?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
+}) {
   const overdue =
     invoice.due_date && new Date(invoice.due_date) < new Date() && invoice.status !== "paid";
-  return (
-    <Link
-      to="/invoice/$id"
-      params={{ id: invoice.id }}
-      className="glass-card rounded-xl p-4 flex items-center gap-4 hover:border-primary/40 transition-colors group"
-    >
-      <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center shrink-0">
-        <FileText className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-      </div>
+
+  const inner = (
+    <>
+      {selectable ? (
+        <div
+          className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 border ${
+            selected ? "bg-primary border-primary" : "bg-accent border-border"
+          }`}
+        >
+          {selected ? (
+            <Check className="w-5 h-5 text-primary-foreground" />
+          ) : (
+            <FileText className="w-5 h-5 text-muted-foreground" />
+          )}
+        </div>
+      ) : (
+        <div className="w-10 h-10 rounded-lg bg-accent flex items-center justify-center shrink-0">
+          <FileText className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+        </div>
+      )}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <p className="font-medium truncate">{invoice.supplier ?? "Onbekende leverancier"}</p>
@@ -54,6 +75,30 @@ export function InvoiceCard({ invoice }: { invoice: Invoice }) {
           {formatWithEuroEstimate(invoice.amount as any, invoice.currency)}
         </p>
       </div>
+    </>
+  );
+
+  if (selectable) {
+    return (
+      <button
+        type="button"
+        onClick={() => onToggleSelect?.(invoice.id)}
+        className={`w-full text-left glass-card rounded-xl p-4 flex items-center gap-4 transition-colors ${
+          selected ? "border-primary/60" : "hover:border-primary/40"
+        }`}
+      >
+        {inner}
+      </button>
+    );
+  }
+
+  return (
+    <Link
+      to="/invoice/$id"
+      params={{ id: invoice.id }}
+      className="glass-card rounded-xl p-4 flex items-center gap-4 hover:border-primary/40 transition-colors group"
+    >
+      {inner}
     </Link>
   );
 }
