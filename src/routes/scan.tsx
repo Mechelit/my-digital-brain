@@ -37,6 +37,8 @@ function ScanPage() {
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState<string>("");
   const [isDesktop, setIsDesktop] = useState(false);
+  const [waitingPaste, setWaitingPaste] = useState(false);
+  const pasteZoneRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setIsDesktop(window.matchMedia("(min-width: 768px) and (pointer: fine)").matches);
@@ -47,14 +49,43 @@ function ScanPage() {
       const item = Array.from(e.clipboardData?.items ?? []).find((i) => i.type.startsWith("image/"));
       const file = item?.getAsFile();
       if (file) {
+        e.preventDefault();
+        setWaitingPaste(false);
         toast.success("Screenshot geplakt");
         void handleFile(file);
+      } else if (waitingPaste) {
+        toast.error("Geen afbeelding op je klembord — maak eerst een screenshot");
       }
     };
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, waitingPaste]);
+
+  const tryPasteScreenshot = async () => {
+    // Try Clipboard API first (works on real domains with permission)
+    try {
+      if (navigator.clipboard && "read" in navigator.clipboard) {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          const imgType = item.types.find((t) => t.startsWith("image/"));
+          if (imgType) {
+            const blob = await item.getType(imgType);
+            const file = new File([blob], `screenshot.${imgType.split("/")[1] || "png"}`, { type: imgType });
+            toast.success("Screenshot geplakt");
+            void handleFile(file);
+            return;
+          }
+        }
+      }
+    } catch {
+      // permission denied / iframe — fall through to manual paste
+    }
+    // Fallback: ask user to press Ctrl/Cmd+V; existing window paste listener handles it
+    setWaitingPaste(true);
+    toast.info("Druk nu Ctrl/Cmd+V om je screenshot te plakken");
+    setTimeout(() => pasteZoneRef.current?.focus(), 0);
+  };
 
   const handleFile = async (file: File) => {
     if (!user) return;
@@ -151,30 +182,26 @@ function ScanPage() {
           </button>
 
           <button
-            onClick={async () => {
-              try {
-                const items = await navigator.clipboard.read();
-                for (const item of items) {
-                  const imgType = item.types.find((t) => t.startsWith("image/"));
-                  if (imgType) {
-                    const blob = await item.getType(imgType);
-                    const file = new File([blob], `screenshot.${imgType.split("/")[1] || "png"}`, { type: imgType });
-                    toast.success("Screenshot geplakt");
-                    void handleFile(file);
-                    return;
-                  }
-                }
-                toast.error("Geen afbeelding op je klembord — maak eerst een screenshot");
-              } catch {
-                toast.error("Geen toegang tot klembord — gebruik Ctrl/Cmd+V");
-              }
-            }}
+            onClick={tryPasteScreenshot}
             className="glass-card rounded-2xl p-8 text-left hover:border-primary/40 transition-colors group"
           >
             <Clipboard className="w-8 h-8 text-primary mb-4" />
             <h2 className="font-semibold mb-1">Screenshot plakken</h2>
             <p className="text-sm text-muted-foreground">Knip met Win+Shift+S of Cmd+Shift+4, dan hier plakken.</p>
           </button>
+
+          {waitingPaste && (
+            <div
+              ref={pasteZoneRef}
+              tabIndex={0}
+              onBlur={() => setWaitingPaste(false)}
+              className="md:col-span-2 glass-card rounded-2xl p-8 text-center border-2 border-dashed border-primary/60 outline-none focus:border-primary"
+            >
+              <Clipboard className="w-8 h-8 text-primary mx-auto mb-3" />
+              <p className="font-medium mb-1">Druk nu Ctrl/Cmd+V</p>
+              <p className="text-sm text-muted-foreground">Je screenshot wordt automatisch ingelezen.</p>
+            </div>
+          )}
 
           <button
             type="button"
