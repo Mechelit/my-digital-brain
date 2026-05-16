@@ -29,6 +29,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [loading, user, location.pathname, navigate]);
 
+  const sync = useServerFn(syncGmail);
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!user) return;
+    const key = `lastGmailSync:${user.id}`;
+    const last = Number(localStorage.getItem(key) || 0);
+    if (Date.now() - last < SYNC_THROTTLE_MS) return;
+    localStorage.setItem(key, String(Date.now()));
+    sync({})
+      .then((r: any) => {
+        if (r?.imported > 0) {
+          qc.invalidateQueries({ queryKey: ["invoices"] });
+        }
+      })
+      .catch(() => {});
+  }, [user?.id, sync, qc]);
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-muted-foreground">…</div>;
   }
