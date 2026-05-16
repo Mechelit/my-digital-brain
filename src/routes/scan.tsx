@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useServerFn } from "@tanstack/react-start";
 import { extractInvoice } from "@/lib/invoices.functions";
 import { toast } from "sonner";
-import { Camera, Upload, Loader2, Monitor, Smartphone, QrCode } from "lucide-react";
+import { Camera, Upload, Loader2, Monitor, Smartphone, QrCode, Clipboard } from "lucide-react";
 
 export const Route = createFileRoute("/scan")({
   component: () => (
