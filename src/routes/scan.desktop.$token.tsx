@@ -20,17 +20,29 @@ function DesktopWaiter() {
   const [qr, setQr] = useState("");
   const [delivered, setDelivered] = useState(false);
   const [invoiceId, setInvoiceId] = useState<string | null>(null);
-  const url = `${typeof window !== "undefined" ? window.location.origin : ""}/m/${token}`;
+  const url = typeof window !== "undefined" ? `${window.location.origin}/m/${token}` : "";
 
   useEffect(() => {
+    if (!url) return;
+    // generate QR immediately, non-blocking
     QRCode.toDataURL(url, {
-      width: 320,
+      width: 280,
       margin: 1,
+      errorCorrectionLevel: "L",
       color: { dark: "#0d1216", light: "#ffffff" },
-    }).then(setQr);
+    })
+      .then(setQr)
+      .catch(() => {});
   }, [url]);
 
   useEffect(() => {
+    let cancelled = false;
+    const onDelivered = (id: string) => {
+      if (cancelled) return;
+      setDelivered(true);
+      setInvoiceId(id);
+      navigate({ to: "/invoice/$id", params: { id } });
+    };
     const channel = supabase
       .channel(`scan-${token}`)
       .on(
@@ -43,14 +55,7 @@ function DesktopWaiter() {
         },
         (payload) => {
           const row = payload.new as { status: string; invoice_id: string | null };
-          if (row.status === "delivered" && row.invoice_id) {
-            setDelivered(true);
-            setInvoiceId(row.invoice_id);
-            setTimeout(
-              () => navigate({ to: "/invoice/$id", params: { id: row.invoice_id! } }),
-              700,
-            );
-          }
+          if (row.status === "delivered" && row.invoice_id) onDelivered(row.invoice_id);
         },
       )
       .subscribe();
@@ -60,13 +65,10 @@ function DesktopWaiter() {
         .select("status,invoice_id")
         .eq("token", token)
         .maybeSingle();
-      if (data?.status === "delivered" && data.invoice_id) {
-        setDelivered(true);
-        setInvoiceId(data.invoice_id);
-        navigate({ to: "/invoice/$id", params: { id: data.invoice_id } });
-      }
-    }, 2500);
+      if (data?.status === "delivered" && data.invoice_id) onDelivered(data.invoice_id);
+    }, 1500);
     return () => {
+      cancelled = true;
       window.clearInterval(poll);
       supabase.removeChannel(channel);
     };
