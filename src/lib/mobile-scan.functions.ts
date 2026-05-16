@@ -2,11 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-const SYSTEM_PROMPT = `You are an expert at reading Belgian invoices, payment letters, and bills.
+const SYSTEM_PROMPT = `You are an expert at reading Belgian invoices, payment letters, bills, credit notes and refunds.
 Return ONLY a JSON object with these fields (use null when missing):
 - supplier, amount (number), currency, iban (no spaces, uppercase), bic,
 - structured_reference (normalize to "+++123/4567/89012+++"),
-- free_reference, invoice_date (YYYY-MM-DD), due_date (YYYY-MM-DD), notes (max 100 chars).
+- free_reference, invoice_date (YYYY-MM-DD), due_date (YYYY-MM-DD), notes (max 100 chars),
+- category (short Dutch category), ai_description (1 Dutch sentence), is_refund (true for refund/credit note/money coming in).
 Output JSON only, no markdown fences.`;
 
 const Extraction = z.object({
@@ -20,6 +21,9 @@ const Extraction = z.object({
   invoice_date: z.string().nullable().optional(),
   due_date: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
+  ai_description: z.string().nullable().optional(),
+  is_refund: z.boolean().nullable().optional(),
 });
 
 async function loadSession(token: string) {
@@ -104,6 +108,9 @@ export const mobileScanExtract = createServerFn({ method: "POST" })
         invoice_date: parsed.invoice_date ?? null,
         due_date: parsed.due_date ?? null,
         notes: parsed.notes ?? null,
+        category: parsed.category ?? null,
+        ai_description: parsed.ai_description ?? null,
+        is_refund: parsed.is_refund ?? false,
         scan_path: path,
         raw_extraction: parsed,
       })
@@ -120,7 +127,7 @@ export const mobileScanExtract = createServerFn({ method: "POST" })
   });
 
 export const mobileMarkPaid = createServerFn({ method: "POST" })
-  .inputValidator((i: { token: string; invoiceId: string }) => i)
+  .inputValidator((i: { token: string; invoiceId: string; accountId?: string | null }) => i)
   .handler(async ({ data }) => {
     const session = await loadSession(data.token);
     const { data: inv } = await supabaseAdmin
@@ -130,20 +137,20 @@ export const mobileMarkPaid = createServerFn({ method: "POST" })
       .single();
     if (!inv || inv.user_id !== session.user_id) throw new Error("Niet jouw factuur");
 
-    const { data: defaultAcc } = await supabaseAdmin
+    const accountQuery = supabaseAdmin
       .from("accounts")
       .select("id")
-      .eq("user_id", session.user_id)
-      .order("is_default", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .eq("user_id", session.user_id);
+    const { data: selectedAcc } = data.accountId
+      ? await accountQuery.eq("id", data.accountId).maybeSingle()
+      : await accountQuery.order("is_default", { ascending: false }).limit(1).maybeSingle();
 
     const { error } = await supabaseAdmin
       .from("invoices")
       .update({
         status: "paid",
         paid_at: new Date().toISOString(),
-        paid_from_account: defaultAcc?.id ?? null,
+        paid_from_account: selectedAcc?.id ?? null,
       })
       .eq("id", data.invoiceId);
     if (error) throw new Error(error.message);
