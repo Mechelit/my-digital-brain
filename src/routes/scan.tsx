@@ -132,8 +132,8 @@ function ScanPage() {
             className="glass-card rounded-2xl p-8 text-left hover:border-primary/40 transition-colors group"
           >
             <Upload className="w-8 h-8 text-primary mb-4" />
-            <h2 className="font-semibold mb-1">Bestand uploaden</h2>
-            <p className="text-sm text-muted-foreground">PDF of foto uit Doccle, mail, etc.</p>
+            <h2 className="font-semibold mb-1">Bestand of screenshot uploaden</h2>
+            <p className="text-sm text-muted-foreground">PDF, screenshot of foto uit Doccle, mail, etc.</p>
           </button>
 
           <button
