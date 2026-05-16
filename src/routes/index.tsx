@@ -1,14 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
 import { InvoiceCard } from "@/components/InvoiceCard";
 import { Button } from "@/components/ui/button";
-import { Camera, Sparkles } from "lucide-react";
+import { Camera, Sparkles, Trash2, X } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import type { Database } from "@/integrations/supabase/types";
 import { estimateEuro, formatMoney } from "@/lib/format";
+import { toast } from "sonner";
 
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 
