@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import QRCode from "qrcode";
 import { mobileGetSession, mobileScanExtract, mobileMarkPaid } from "@/lib/mobile-scan.functions";
-import { supabase } from "@/integrations/supabase/client";
 import { Camera, Loader2, Brain, Check, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { estimateEuro, formatMoney, formatWithEuroEstimate } from "@/lib/format";
