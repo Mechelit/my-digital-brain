@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { AppShell } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
-import { Smartphone, Check } from "lucide-react";
+import { Smartphone, Check, ExternalLink } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/scan/desktop/$token")({
   component: () => <AppShell><DesktopWaiter /></AppShell>,
@@ -14,6 +15,7 @@ function DesktopWaiter() {
   const navigate = useNavigate();
   const [qr, setQr] = useState("");
   const [delivered, setDelivered] = useState(false);
+  const [invoiceId, setInvoiceId] = useState<string | null>(null);
   const url = `${typeof window !== "undefined" ? window.location.origin : ""}/m/${token}`;
 
   useEffect(() => {
@@ -30,12 +32,25 @@ function DesktopWaiter() {
           const row = payload.new as { status: string; invoice_id: string | null };
           if (row.status === "delivered" && row.invoice_id) {
             setDelivered(true);
+            setInvoiceId(row.invoice_id);
             setTimeout(() => navigate({ to: "/invoice/$id", params: { id: row.invoice_id! } }), 700);
           }
         }
       )
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    const poll = window.setInterval(async () => {
+      const { data } = await supabase
+        .from("mobile_scan_sessions")
+        .select("status,invoice_id")
+        .eq("token", token)
+        .maybeSingle();
+      if (data?.status === "delivered" && data.invoice_id) {
+        setDelivered(true);
+        setInvoiceId(data.invoice_id);
+        navigate({ to: "/invoice/$id", params: { id: data.invoice_id } });
+      }
+    }, 2500);
+    return () => { window.clearInterval(poll); supabase.removeChannel(channel); };
   }, [token, navigate]);
 
   return (
