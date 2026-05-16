@@ -5,7 +5,7 @@ import QRCode from "qrcode";
 import { mobileGetSession, mobileScanExtract, mobileMarkPaid } from "@/lib/mobile-scan.functions";
 import { Camera, Loader2, Brain, Check, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatMoney, formatWithEuroEstimate } from "@/lib/format";
+import { estimateEuro, formatMoney, formatWithEuroEstimate } from "@/lib/format";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/m/$token")({ component: MobileScanPage });
@@ -20,7 +20,7 @@ const fileToBase64 = (file: File) =>
 
 function buildEpcQr(inv: any): string | null {
   if (!inv?.iban || !inv?.amount) return null;
-  const amount = Number(inv.amount).toFixed(2);
+  const amount = (estimateEuro(inv.amount, inv.currency) ?? Number(inv.amount)).toFixed(2);
   const ref = (inv.structured_reference || "").replace(/[^0-9]/g, "");
   const lines = [
     "BCD",
