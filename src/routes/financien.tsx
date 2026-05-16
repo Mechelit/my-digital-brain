@@ -9,12 +9,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Wallet, Repeat, Lock, Plus, Trash2, Pencil, Check, X, PieChart } from "lucide-react";
 import { toast } from "sonner";
+import { estimateEuro, formatMoney, formatWithEuroEstimate } from "@/lib/format";
 
 export const Route = createFileRoute("/financien")({
   component: () => <AppShell><FinancienPage /></AppShell>,
 });
 
-const fmt = (n: number) => new Intl.NumberFormat("nl-BE", { style: "currency", currency: "EUR" }).format(n);
+const fmt = (n: number) => formatMoney(n, "EUR");
 
 function FinancienPage() {
   const { user } = useAuth();
@@ -56,7 +57,7 @@ function FinancienPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("invoices")
-        .select("id,supplier,amount,category,paid_at,is_refund")
+        .select("id,supplier,amount,currency,category,paid_at,is_refund")
         .eq("status", "paid")
         .not("amount", "is", null);
       if (error) throw error;
@@ -69,12 +70,13 @@ function FinancienPage() {
     const cat = (inv as any).category || "Niet gecategoriseerd";
     const sign = (inv as any).is_refund ? -1 : 1;
     const cur = categoryMap.get(cat) ?? { total: 0, count: 0 };
-    cur.total += sign * Number((inv as any).amount ?? 0);
+    cur.total += sign * (estimateEuro((inv as any).amount, (inv as any).currency) ?? 0);
     cur.count += 1;
     categoryMap.set(cat, cur);
   }
   const byCategory = [...categoryMap.entries()].sort((a, b) => Math.abs(b[1].total) - Math.abs(a[1].total));
   const totalSpent = byCategory.reduce((s, [, v]) => s + v.total, 0);
+  const totalMagnitude = byCategory.reduce((s, [, v]) => s + Math.abs(v.total), 0);
 
 
   const totalBalance = (accounts.data ?? []).reduce((s, a: any) => s + Number(a.balance ?? 0), 0);
@@ -204,15 +206,15 @@ function FinancienPage() {
       {/* Uitgaven per categorie */}
       <section>
         <h2 className="text-lg font-semibold mb-1 flex items-center gap-2"><PieChart className="w-4 h-4 text-primary" />Uitgaven per categorie</h2>
-        <p className="text-xs text-muted-foreground mb-3">Op basis van betaalde facturen, automatisch gecategoriseerd door AI.</p>
+        <p className="text-xs text-muted-foreground mb-3">Op basis van betaalde facturen, automatisch gecategoriseerd door AI en omgerekend naar EUR.</p>
         {byCategory.length === 0 ? (
           <div className="glass-card rounded-xl p-4 text-sm text-muted-foreground">
-            Nog geen betaalde facturen. Open een factuur en klik "Analyseer" om te categoriseren.
+            Nog geen betaalde facturen. AI categoriseert facturen automatisch zodra je ze opent.
           </div>
         ) : (
           <div className="space-y-2">
             {byCategory.map(([cat, v]) => {
-              const pct = totalSpent ? (v.total / totalSpent) * 100 : 0;
+              const pct = totalMagnitude ? (Math.abs(v.total) / totalMagnitude) * 100 : 0;
               return (
                 <div key={cat} className="glass-card rounded-xl p-4">
                   <div className="flex items-center justify-between mb-2">
