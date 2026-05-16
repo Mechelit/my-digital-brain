@@ -1,0 +1,1 @@
+ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS is_refund boolean NOT NULL DEFAULT false;
