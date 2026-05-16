@@ -65,11 +65,21 @@ function DesktopWaiter() {
               <Check className="w-8 h-8 text-success" />
             </div>
             <p className="font-medium">Ontvangen — even openen…</p>
+            {invoiceId ? (
+              <Button className="mt-4" variant="secondary" onClick={() => navigate({ to: "/invoice/$id", params: { id: invoiceId } })}>
+                Open factuur nu
+              </Button>
+            ) : null}
           </div>
         ) : qr ? (
           <>
             <img src={qr} alt="QR-code" className="rounded-xl bg-white p-3" />
             <p className="text-xs text-muted-foreground mt-4 flex items-center gap-1"><Smartphone className="w-3 h-3" />Wachten op telefoon…</p>
+            <a href={url} target="_blank" rel="noreferrer" className="mt-4 w-full">
+              <Button variant="secondary" className="w-full">
+                <ExternalLink className="w-4 h-4 mr-2" /> Open telefoonlink
+              </Button>
+            </a>
           </>
         ) : null}
       </div>
