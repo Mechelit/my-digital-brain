@@ -33,6 +33,7 @@ function InvoiceDetail() {
   const [form, setForm] = useState<Partial<Invoice>>({});
   const [scanUrl, setScanUrl] = useState<string | null>(null);
   const [payOpen, setPayOpen] = useState(false);
+  const [aiAccepted, setAiAccepted] = useState(false);
 
   const { data: invoice } = useQuery({
     queryKey: ["invoice", id],
@@ -157,17 +158,6 @@ function InvoiceDetail() {
         </div>
       </div>
 
-      {invoice.status !== "paid" && !form.is_refund && (
-        <Button
-          size="lg"
-          className="w-full h-14 text-base glow-ring mb-6"
-          onClick={() => setPayOpen(true)}
-        >
-          <CreditCard className="w-5 h-5 mr-2" />
-          Betaal {form.amount != null ? formatWithEuroEstimate(form.amount as any, form.currency) : ""}
-        </Button>
-      )}
-
       <PayDialog
         open={payOpen}
         onOpenChange={setPayOpen}
@@ -240,7 +230,24 @@ function InvoiceDetail() {
         onUpdated={() => qc.invalidateQueries({ queryKey: ["invoice", id] })}
         form={form}
         setForm={setForm}
+        accepted={aiAccepted}
+        onAccept={async () => {
+          await save.mutateAsync(form);
+          setAiAccepted(true);
+          toast.success("AI-analyse bevestigd");
+        }}
       />
+
+      {invoice.status !== "paid" && !form.is_refund && aiAccepted && (
+        <Button
+          size="lg"
+          className="w-full h-14 text-base glow-ring mb-6"
+          onClick={() => setPayOpen(true)}
+        >
+          <CreditCard className="w-5 h-5 mr-2" />
+          Betaal {form.amount != null ? formatWithEuroEstimate(form.amount as any, form.currency) : ""}
+        </Button>
+      )}
 
       <div className="glass-card rounded-2xl p-6 space-y-4">
         <div className="grid grid-cols-2 gap-4">
@@ -395,11 +402,15 @@ function AISection({
   form,
   setForm,
   onUpdated,
+  accepted,
+  onAccept,
 }: {
   invoice: Invoice;
   form: Partial<Invoice>;
   setForm: (f: Partial<Invoice>) => void;
   onUpdated: () => void;
+  accepted: boolean;
+  onAccept: () => Promise<void>;
 }) {
   const runAI = useServerFn(categorizeInvoice);
   const mut = useMutation({
@@ -469,6 +480,15 @@ function AISection({
           placeholder="Korte uitleg waar de betaling voor is..."
         />
       </Field>
+      <Button
+        variant={accepted ? "secondary" : "default"}
+        className="w-full"
+        onClick={() => void onAccept()}
+        disabled={mut.isPending}
+      >
+        <Check className="w-4 h-4 mr-2" />
+        {accepted ? "AI-analyse bevestigd" : "Accepteer AI-analyse"}
+      </Button>
     </div>
   );
 }
