@@ -79,6 +79,7 @@ Notities: ${inv.notes ?? "—"}`;
     await supabase.from("invoices").update({
       category: parsed.category,
       ai_description: parsed.description,
+      is_refund: parsed.is_refund ?? false,
     }).eq("id", data.id);
 
     return parsed;
