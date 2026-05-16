@@ -155,7 +155,13 @@ export const syncGmail = createServerFn({ method: "POST" })
 
         const isRefund = !!parsed.is_refund || /credit\s*nota|creditnota|refund|terugbetal/i.test(subject);
 
-        await supabase.from("invoices").insert({
+        const supplierFinal = parsed.supplier ?? from.replace(/<.*>/, "").trim() ?? null;
+
+        // Re-check ignore list against AI-extracted supplier
+        if (matchesIgnoredSupplier(supplierFinal)) { skipped++; continue; }
+
+        // Skip mails that clearly are not invoices (no amount AND no IBAN AND not a refund)
+        if (!isRefund && parsed.amount == null && !parsed.iban) { skipped++; continue; }
           user_id: userId,
           source: "email",
           status: "pending",
