@@ -317,9 +317,27 @@ function InvoiceDetail() {
           </Field>
         )}
         {invoice.status === "paid" ? (
-          <Button variant="secondary" className="w-full" disabled>
-            <Check className="w-4 h-4 mr-2" /> Al betaald
-          </Button>
+          <div className="space-y-2">
+            <Button variant="secondary" className="w-full" disabled>
+              <Check className="w-4 h-4 mr-2" />
+              {(invoice as any).auto_paid ? "Automatisch betaald" : "Al betaald"}
+            </Button>
+            {!(invoice as any).auto_paid && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs"
+                onClick={async () => {
+                  const accountId = form.paid_from_account ?? accounts.find((a) => a.is_default)?.id ?? accounts[0]?.id ?? null;
+                  if (!accountId) { toast.error("Kies eerst een rekening"); return; }
+                  await save.mutateAsync({ ...form, auto_paid: true, paid_from_account: accountId } as any);
+                  toast.success("Gemarkeerd als automatische betaling");
+                }}
+              >
+                Markeer als automatische betaling
+              </Button>
+            )}
+          </div>
         ) : form.is_refund ? (
           <Button
             variant="secondary"
@@ -329,18 +347,40 @@ function InvoiceDetail() {
             Wijzigingen opslaan
           </Button>
         ) : (
-          <Button
-            size="lg"
-            className="w-full h-14 text-base glow-ring"
-            onClick={async () => {
-              await save.mutateAsync(form);
-              setAiAccepted(true);
-              setPayOpen(true);
-            }}
-          >
-            <CreditCard className="w-5 h-5 mr-2" />
-            Betaal {form.amount != null ? formatWithEuroEstimate(form.amount as any, form.currency) : ""}
-          </Button>
+          <div className="space-y-2">
+            <Button
+              size="lg"
+              className="w-full h-14 text-base glow-ring"
+              onClick={async () => {
+                await save.mutateAsync(form);
+                setAiAccepted(true);
+                setPayOpen(true);
+              }}
+            >
+              <CreditCard className="w-5 h-5 mr-2" />
+              Betaal {form.amount != null ? formatWithEuroEstimate(form.amount as any, form.currency) : ""}
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={async () => {
+                const accountId = form.paid_from_account ?? accounts.find((a) => a.is_default)?.id ?? accounts[0]?.id ?? null;
+                if (!accountId) { toast.error("Kies eerst een rekening hierboven"); return; }
+                const accName = accounts.find((a) => a.id === accountId)?.name ?? "rekening";
+                await save.mutateAsync({
+                  ...form,
+                  status: "paid",
+                  paid_at: new Date().toISOString(),
+                  paid_from_account: accountId,
+                  auto_paid: true,
+                } as any);
+                toast.success(`Auto-betaald via ${accName}`);
+                navigate({ to: "/" });
+              }}
+            >
+              Automatische betaling via {accounts.find((a) => a.id === (form.paid_from_account ?? accounts.find((x) => x.is_default)?.id))?.name ?? "rekening"}
+            </Button>
+          </div>
         )}
       </div>
 

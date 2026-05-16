@@ -1,0 +1,1 @@
+ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS auto_paid boolean NOT NULL DEFAULT false;
