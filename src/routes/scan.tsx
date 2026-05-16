@@ -49,14 +49,43 @@ function ScanPage() {
       const item = Array.from(e.clipboardData?.items ?? []).find((i) => i.type.startsWith("image/"));
       const file = item?.getAsFile();
       if (file) {
+        e.preventDefault();
+        setWaitingPaste(false);
         toast.success("Screenshot geplakt");
         void handleFile(file);
+      } else if (waitingPaste) {
+        toast.error("Geen afbeelding op je klembord — maak eerst een screenshot");
       }
     };
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, waitingPaste]);
+
+  const tryPasteScreenshot = async () => {
+    // Try Clipboard API first (works on real domains with permission)
+    try {
+      if (navigator.clipboard && "read" in navigator.clipboard) {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          const imgType = item.types.find((t) => t.startsWith("image/"));
+          if (imgType) {
+            const blob = await item.getType(imgType);
+            const file = new File([blob], `screenshot.${imgType.split("/")[1] || "png"}`, { type: imgType });
+            toast.success("Screenshot geplakt");
+            void handleFile(file);
+            return;
+          }
+        }
+      }
+    } catch {
+      // permission denied / iframe — fall through to manual paste
+    }
+    // Fallback: ask user to press Ctrl/Cmd+V; existing window paste listener handles it
+    setWaitingPaste(true);
+    toast.info("Druk nu Ctrl/Cmd+V om je screenshot te plakken");
+    setTimeout(() => pasteZoneRef.current?.focus(), 0);
+  };
 
   const handleFile = async (file: File) => {
     if (!user) return;
