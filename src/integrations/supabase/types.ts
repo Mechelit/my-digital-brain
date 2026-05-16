@@ -90,6 +90,7 @@ export type Database = {
           created_at: string
           currency: string | null
           due_date: string | null
+          external_id: string | null
           free_reference: string | null
           iban: string | null
           id: string
@@ -112,6 +113,7 @@ export type Database = {
           created_at?: string
           currency?: string | null
           due_date?: string | null
+          external_id?: string | null
           free_reference?: string | null
           iban?: string | null
           id?: string
@@ -134,6 +136,7 @@ export type Database = {
           created_at?: string
           currency?: string | null
           due_date?: string | null
+          external_id?: string | null
           free_reference?: string | null
           iban?: string | null
           id?: string
