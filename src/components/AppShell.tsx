@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { Brain, Camera, Inbox, LayoutDashboard, LogOut, Wallet, Coins } from "lucide-react";
+import { Brain, Camera, Inbox, LayoutDashboard, LogOut, Wallet, Coins, FileText } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ const nav = [
   { to: "/inbox", icon: Inbox, label: "Mail-inbox" },
   { to: "/accounts", icon: Wallet, label: "Rekeningen" },
   { to: "/financien", icon: Coins, label: "Financiën" },
+  { to: "/contracten", icon: FileText, label: "Contracten" },
 ] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {

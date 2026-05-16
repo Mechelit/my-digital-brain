@@ -13,6 +13,7 @@ import { Route as ScanRouteImport } from './routes/scan'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as FinancienRouteImport } from './routes/financien'
+import { Route as ContractenRouteImport } from './routes/contracten'
 import { Route as AccountsRouteImport } from './routes/accounts'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MTokenRouteImport } from './routes/m.$token'
@@ -38,6 +39,11 @@ const InboxRoute = InboxRouteImport.update({
 const FinancienRoute = FinancienRouteImport.update({
   id: '/financien',
   path: '/financien',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContractenRoute = ContractenRouteImport.update({
+  id: '/contracten',
+  path: '/contracten',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountsRoute = AccountsRouteImport.update({
@@ -74,6 +80,7 @@ const ApiPublicHooksSyncGmailRoute = ApiPublicHooksSyncGmailRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/accounts': typeof AccountsRoute
+  '/contracten': typeof ContractenRoute
   '/financien': typeof FinancienRoute
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/accounts': typeof AccountsRoute
+  '/contracten': typeof ContractenRoute
   '/financien': typeof FinancienRoute
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
@@ -99,6 +107,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/accounts': typeof AccountsRoute
+  '/contracten': typeof ContractenRoute
   '/financien': typeof FinancienRoute
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
@@ -113,6 +122,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/accounts'
+    | '/contracten'
     | '/financien'
     | '/inbox'
     | '/login'
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/accounts'
+    | '/contracten'
     | '/financien'
     | '/inbox'
     | '/login'
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/accounts'
+    | '/contracten'
     | '/financien'
     | '/inbox'
     | '/login'
@@ -150,6 +162,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountsRoute: typeof AccountsRoute
+  ContractenRoute: typeof ContractenRoute
   FinancienRoute: typeof FinancienRoute
   InboxRoute: typeof InboxRoute
   LoginRoute: typeof LoginRoute
@@ -187,6 +200,13 @@ declare module '@tanstack/react-router' {
       path: '/financien'
       fullPath: '/financien'
       preLoaderRoute: typeof FinancienRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contracten': {
+      id: '/contracten'
+      path: '/contracten'
+      fullPath: '/contracten'
+      preLoaderRoute: typeof ContractenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/accounts': {
@@ -247,6 +267,7 @@ const ScanRouteWithChildren = ScanRoute._addFileChildren(ScanRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountsRoute: AccountsRoute,
+  ContractenRoute: ContractenRoute,
   FinancienRoute: FinancienRoute,
   InboxRoute: InboxRoute,
   LoginRoute: LoginRoute,
