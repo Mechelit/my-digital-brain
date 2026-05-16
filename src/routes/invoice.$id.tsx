@@ -84,6 +84,23 @@ function InvoiceDetail() {
     navigate({ to: "/" });
   };
 
+  const ignoreSender = async () => {
+    const supplier = invoice?.supplier?.trim();
+    if (!supplier) {
+      toast.error("Geen leverancier ingevuld");
+      return;
+    }
+    if (!confirm(`"${supplier}" voortaan negeren en deze factuur verwijderen?`)) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from("ignored_suppliers").insert({ user_id: user.id, pattern: supplier });
+    if (invoice?.scan_path)
+      await supabase.storage.from("invoice-scans").remove([invoice.scan_path]);
+    await supabase.from("invoices").delete().eq("id", id);
+    toast.success(`"${supplier}" wordt voortaan genegeerd`);
+    navigate({ to: "/" });
+  };
+
   const confirmAndPay = async () => {
     const defaultAcc = accounts.find((a) => a.is_default) ?? accounts[0];
     const accountId = form.paid_from_account ?? defaultAcc?.id ?? null;
@@ -125,9 +142,16 @@ function InvoiceDetail() {
             ) : null}
           </h1>
         </div>
-        <Button size="sm" variant="ghost" onClick={del}>
-          <Trash2 className="w-4 h-4" />
-        </Button>
+        <div className="flex gap-1">
+          {invoice.source === "email" && (
+            <Button size="sm" variant="ghost" onClick={ignoreSender} title="Afzender voortaan negeren">
+              Negeer afzender
+            </Button>
+          )}
+          <Button size="sm" variant="ghost" onClick={del}>
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       {scanUrl &&

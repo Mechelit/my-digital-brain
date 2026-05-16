@@ -83,6 +83,48 @@ export type Database = {
         }
         Relationships: []
       }
+      ignored_emails: {
+        Row: {
+          created_at: string
+          external_id: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          external_id: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          external_id?: string
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ignored_suppliers: {
+        Row: {
+          created_at: string
+          id: string
+          pattern: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pattern: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pattern?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           ai_description: string | null

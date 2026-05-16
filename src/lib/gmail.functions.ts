@@ -88,11 +88,23 @@ export const syncGmail = createServerFn({ method: "POST" })
     let skipped = 0;
     const errors: string[] = [];
 
+    // Load ignore lists once
+    const [{ data: ignoredEmails }, { data: ignoredSuppliers }] = await Promise.all([
+      supabase.from("ignored_emails").select("external_id").eq("user_id", userId),
+      supabase.from("ignored_suppliers").select("pattern").eq("user_id", userId),
+    ]);
+    const ignoredExternalIds = new Set((ignoredEmails ?? []).map((r: any) => r.external_id));
+    const ignoredPatterns: string[] = (ignoredSuppliers ?? []).map((r: any) => (r.pattern ?? "").toLowerCase()).filter(Boolean);
+    const matchesIgnoredSupplier = (...fields: (string | null | undefined)[]) =>
+      ignoredPatterns.some((p) => fields.some((f) => f && f.toLowerCase().includes(p)));
+
     for (const messageId of ids) {
       try {
+        const externalId = `gmail:${messageId}`;
+        if (ignoredExternalIds.has(externalId)) { skipped++; continue; }
         // Dedupe
         const { data: existing } = await supabase
-          .from("invoices").select("id").eq("user_id", userId).eq("external_id", `gmail:${messageId}`).maybeSingle();
+          .from("invoices").select("id").eq("user_id", userId).eq("external_id", externalId).maybeSingle();
         if (existing) { skipped++; continue; }
 
         const msg = await gmailFetch(`/users/me/messages/${messageId}?format=full`);
@@ -100,6 +112,9 @@ export const syncGmail = createServerFn({ method: "POST" })
         const subject = headers.find((h: any) => h.name?.toLowerCase() === "subject")?.value ?? "";
         const from = headers.find((h: any) => h.name?.toLowerCase() === "from")?.value ?? "";
         const isDoccle = /doccle/i.test(from) || /doccle/i.test(subject);
+
+        // Skip if sender/subject matches an ignored supplier (e.g. KBC overzichten)
+        if (matchesIgnoredSupplier(from, subject)) { skipped++; continue; }
 
         const pdfs = findPdfParts(msg.payload);
         if (pdfs.length === 0 && !isDoccle) { skipped++; continue; }
@@ -140,13 +155,21 @@ export const syncGmail = createServerFn({ method: "POST" })
 
         const isRefund = !!parsed.is_refund || /credit\s*nota|creditnota|refund|terugbetal/i.test(subject);
 
+        const supplierFinal = parsed.supplier ?? from.replace(/<.*>/, "").trim() ?? null;
+
+        // Re-check ignore list against AI-extracted supplier
+        if (matchesIgnoredSupplier(supplierFinal)) { skipped++; continue; }
+
+        // Skip mails that clearly are not invoices (no amount AND no IBAN AND not a refund)
+        if (!isRefund && parsed.amount == null && !parsed.iban) { skipped++; continue; }
+
         await supabase.from("invoices").insert({
           user_id: userId,
           source: "email",
           status: "pending",
           is_refund: isRefund,
           external_id: `gmail:${messageId}`,
-          supplier: parsed.supplier ?? from.replace(/<.*>/, "").trim() ?? null,
+          supplier: supplierFinal,
           amount: parsed.amount ?? null,
           currency: parsed.currency ?? "EUR",
           iban: parsed.iban?.replace(/\s+/g, "").toUpperCase() ?? null,
