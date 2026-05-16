@@ -76,14 +76,19 @@ function ScanPage() {
   };
 
   const startMobileSession = () => {
-    if (!user || busy) return;
+    if (!user) {
+      toast.error("Even wachten — sessie laadt nog");
+      return;
+    }
     const token = crypto.randomUUID().replace(/-/g, "");
-    // fire-and-forget insert; desktop page also ensures session exists
     void supabase
       .from("mobile_scan_sessions")
       .insert({ user_id: user.id, token, status: "open" })
       .then(({ error }) => {
-        if (error) console.error("session insert", error);
+        if (error) {
+          console.error("session insert", error);
+          toast.error("Sessie aanmaken mislukt: " + error.message);
+        }
       });
     navigate({ to: "/scan/desktop/$token", params: { token } });
   };
