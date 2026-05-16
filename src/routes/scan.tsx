@@ -146,8 +146,34 @@ function ScanPage() {
             className="glass-card rounded-2xl p-8 text-left hover:border-primary/40 transition-colors group"
           >
             <Upload className="w-8 h-8 text-primary mb-4" />
-            <h2 className="font-semibold mb-1">Bestand of screenshot uploaden</h2>
-            <p className="text-sm text-muted-foreground">PDF, screenshot of foto uit Doccle, mail, etc.</p>
+            <h2 className="font-semibold mb-1">Bestand uploaden</h2>
+            <p className="text-sm text-muted-foreground">PDF of foto uit Doccle, mail, etc.</p>
+          </button>
+
+          <button
+            onClick={async () => {
+              try {
+                const items = await navigator.clipboard.read();
+                for (const item of items) {
+                  const imgType = item.types.find((t) => t.startsWith("image/"));
+                  if (imgType) {
+                    const blob = await item.getType(imgType);
+                    const file = new File([blob], `screenshot.${imgType.split("/")[1] || "png"}`, { type: imgType });
+                    toast.success("Screenshot geplakt");
+                    void handleFile(file);
+                    return;
+                  }
+                }
+                toast.error("Geen afbeelding op je klembord — maak eerst een screenshot");
+              } catch {
+                toast.error("Geen toegang tot klembord — gebruik Ctrl/Cmd+V");
+              }
+            }}
+            className="glass-card rounded-2xl p-8 text-left hover:border-primary/40 transition-colors group"
+          >
+            <Clipboard className="w-8 h-8 text-primary mb-4" />
+            <h2 className="font-semibold mb-1">Screenshot plakken</h2>
+            <p className="text-sm text-muted-foreground">Knip met Win+Shift+S of Cmd+Shift+4, dan hier plakken.</p>
           </button>
 
           <button
