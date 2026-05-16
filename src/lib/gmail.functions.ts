@@ -79,8 +79,8 @@ export const syncGmail = createServerFn({ method: "POST" })
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY ontbreekt");
 
-    // Zoek recente mails met PDF-bijlagen of van Doccle
-    const query = encodeURIComponent('newer_than:60d (has:attachment filename:pdf OR from:doccle.be OR from:doccle.com OR subject:factuur OR subject:rekening OR subject:invoice)');
+    // Zoek recente mails: factuur/rekening/invoice/credit/refund of van Doccle (met of zonder PDF)
+    const query = encodeURIComponent('newer_than:90d (from:doccle.be OR from:doccle.com OR from:doccle.eu OR doccle OR ((has:attachment filename:pdf) AND (subject:factuur OR subject:rekening OR subject:invoice OR subject:receipt OR subject:creditnota OR subject:"credit note" OR subject:refund OR subject:terugbetaling)))');
     const list = await gmailFetch(`/users/me/messages?maxResults=25&q=${query}`);
     const ids: string[] = (list.messages ?? []).map((m: any) => m.id);
 
