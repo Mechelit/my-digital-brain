@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { AppShell } from "@/components/AppShell";
 import { supabase } from "@/integrations/supabase/client";
-import { Smartphone, Check, ExternalLink } from "lucide-react";
+import { Smartphone, Check, ExternalLink, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/scan/desktop/$token")({
@@ -21,6 +21,7 @@ function DesktopWaiter() {
   const [delivered, setDelivered] = useState(false);
   const [invoiceId, setInvoiceId] = useState<string | null>(null);
   const url = typeof window !== "undefined" ? `${window.location.origin}/m/${token}` : "";
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (!url) return;
@@ -43,6 +44,18 @@ function DesktopWaiter() {
       setInvoiceId(id);
       navigate({ to: "/invoice/$id", params: { id } });
     };
+    const verifySession = async () => {
+      const { data } = await supabase
+        .from("mobile_scan_sessions")
+        .select("status,invoice_id")
+        .eq("token", token)
+        .maybeSingle();
+      if (cancelled) return;
+      setReady(!!data);
+      if (data?.status === "delivered" && data.invoice_id) onDelivered(data.invoice_id);
+    };
+    void verifySession();
+
     const channel = supabase
       .channel(`scan-${token}`)
       .on(
@@ -65,6 +78,7 @@ function DesktopWaiter() {
         .select("status,invoice_id")
         .eq("token", token)
         .maybeSingle();
+      if (!cancelled && data) setReady(true);
       if (data?.status === "delivered" && data.invoice_id) onDelivered(data.invoice_id);
     }, 1500);
     return () => {
@@ -82,7 +96,12 @@ function DesktopWaiter() {
       </p>
 
       <div className="glass-card rounded-2xl p-8 flex flex-col items-center">
-        {delivered ? (
+        {!ready ? (
+          <div className="py-16 text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-sm text-muted-foreground">QR-sessie openen…</p>
+          </div>
+        ) : delivered ? (
           <div className="py-16 text-center">
             <div className="w-16 h-16 rounded-full bg-success/15 flex items-center justify-center mx-auto mb-4">
               <Check className="w-8 h-8 text-success" />

@@ -29,7 +29,7 @@ const fileToBase64 = (file: File) =>
   });
 
 function ScanPage() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
   const extract = useServerFn(extractInvoice);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -75,21 +75,29 @@ function ScanPage() {
     }
   };
 
-  const startMobileSession = () => {
-    if (!user) {
+  const startMobileSession = async () => {
+    if (loading) {
+      toast.info("Even wachten — sessie laadt nog");
+      return;
+    }
+    const currentUser = user ?? (await supabase.auth.getUser()).data.user;
+    if (!currentUser) {
       toast.error("Even wachten — sessie laadt nog");
       return;
     }
     const token = crypto.randomUUID().replace(/-/g, "");
-    void supabase
+    setBusy(true);
+    setStage("QR-sessie maken…");
+    const { error } = await supabase
       .from("mobile_scan_sessions")
-      .insert({ user_id: user.id, token, status: "open" })
-      .then(({ error }) => {
-        if (error) {
-          console.error("session insert", error);
-          toast.error("Sessie aanmaken mislukt: " + error.message);
-        }
-      });
+      .insert({ user_id: currentUser.id, token, status: "open" });
+    if (error) {
+      setBusy(false);
+      setStage("");
+      toast.error("Sessie aanmaken mislukt: " + error.message);
+      return;
+    }
+    toast.success("Scan-sessie klaar");
     navigate({ to: "/scan/desktop/$token", params: { token } });
   };
 
@@ -131,7 +139,7 @@ function ScanPage() {
           <button
             type="button"
             onClick={startMobileSession}
-            disabled={!user}
+            disabled={busy || loading}
             className="md:col-span-2 glass-card rounded-2xl p-6 text-left hover:border-primary/40 transition-colors flex items-center gap-4 disabled:opacity-50"
           >
             <div className="flex items-center gap-1.5">
@@ -157,14 +165,22 @@ function ScanPage() {
         accept="image/*"
         capture="environment"
         className="hidden"
-        onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.currentTarget.value = "";
+          if (file) void handleFile(file);
+        }}
       />
       <input
         ref={fileRef}
         type="file"
         accept="image/*,application/pdf"
         className="hidden"
-        onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.currentTarget.value = "";
+          if (file) void handleFile(file);
+        }}
       />
     </div>
   );
