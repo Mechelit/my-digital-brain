@@ -107,7 +107,13 @@ function FinancienPage() {
         return a;
     }
   };
-  const totalRecurring = (recurring.data ?? []).reduce((s, r: any) => s + monthlyEquivalent(r), 0);
+  const recurringPrive = (recurring.data ?? [])
+    .filter((r: any) => (r.scope ?? "prive") === "prive")
+    .reduce((s, r: any) => s + monthlyEquivalent(r), 0);
+  const recurringZakelijk = (recurring.data ?? [])
+    .filter((r: any) => r.scope === "zakelijk")
+    .reduce((s, r: any) => s + monthlyEquivalent(r), 0);
+  const totalRecurring = recurringPrive + recurringZakelijk;
   const totalDeposits = (deposits.data ?? []).reduce((s, d: any) => s + Number(d.amount), 0);
   const netWorth = totalBalance + totalDeposits;
 
@@ -119,7 +125,7 @@ function FinancienPage() {
       </header>
 
       {/* Overzicht */}
-      <section className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="glass-card rounded-2xl p-5">
           <p className="text-xs uppercase tracking-wider text-muted-foreground">Totaal vermogen</p>
           <p className="text-2xl font-semibold mt-2 tabular-nums">{fmt(netWorth)}</p>
@@ -132,10 +138,15 @@ function FinancienPage() {
             {accounts.data?.length ?? 0} rekeningen
           </p>
         </div>
-        <div className="glass-card rounded-2xl p-5 col-span-2 md:col-span-1">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Maandelijks vast</p>
-          <p className="text-2xl font-semibold mt-2 tabular-nums">{fmt(totalRecurring)}</p>
-          <p className="text-xs text-muted-foreground mt-1">{recurring.data?.length ?? 0} kosten</p>
+        <div className="glass-card rounded-2xl p-5">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">Vast privé</p>
+          <p className="text-2xl font-semibold mt-2 tabular-nums">{fmt(recurringPrive)}</p>
+          <p className="text-xs text-muted-foreground mt-1">per maand</p>
+        </div>
+        <div className="glass-card rounded-2xl p-5">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">Vast zakelijk</p>
+          <p className="text-2xl font-semibold mt-2 tabular-nums">{fmt(recurringZakelijk)}</p>
+          <p className="text-xs text-muted-foreground mt-1">per maand</p>
         </div>
       </section>
 
