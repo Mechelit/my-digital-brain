@@ -1,12 +1,11 @@
-import { createFileRoute, useParams, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
-import { extractInvoice } from "@/lib/invoices.functions";
-import { Camera, Loader2, Brain } from "lucide-react";
+import QRCode from "qrcode";
+import { mobileGetSession, mobileScanExtract, mobileMarkPaid } from "@/lib/mobile-scan.functions";
+import { Camera, Loader2, Brain, Check, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useAuth } from "@/hooks/use-auth";
 
 export const Route = createFileRoute("/m/$token")({ component: MobileScanPage });
 
@@ -18,63 +17,82 @@ const fileToBase64 = (file: File) =>
     r.readAsDataURL(file);
   });
 
+function buildEpcQr(inv: any): string | null {
+  if (!inv?.iban || !inv?.amount) return null;
+  const amount = Number(inv.amount).toFixed(2);
+  const ref = (inv.structured_reference || "").replace(/[^0-9]/g, "");
+  const lines = [
+    "BCD",
+    "002",
+    "1",
+    "SCT",
+    inv.bic || "",
+    (inv.supplier || "Begunstigde").slice(0, 70),
+    inv.iban.replace(/\s/g, ""),
+    `EUR${amount}`,
+    "",
+    ref || "",
+    ref ? "" : (inv.free_reference || inv.notes || "").slice(0, 140),
+    "",
+  ];
+  return lines.join("\n");
+}
+
 function MobileScanPage() {
   const { token } = useParams({ from: "/m/$token" });
-  const navigate = useNavigate();
-  const { user, loading } = useAuth();
-  const extract = useServerFn(extractInvoice);
+  const getSession = useServerFn(mobileGetSession);
+  const scan = useServerFn(mobileScanExtract);
+  const markPaid = useServerFn(mobileMarkPaid);
   const camRef = useRef<HTMLInputElement>(null);
+
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState("");
-  const [sessionOk, setSessionOk] = useState<boolean | null>(null);
+  const [invoice, setInvoice] = useState<any>(null);
+  const [valid, setValid] = useState<boolean | null>(null);
+  const [qr, setQr] = useState<string>("");
+  const [paid, setPaid] = useState(false);
 
   useEffect(() => {
-    if (loading) return;
-    if (!user) {
-      navigate({ to: "/login" });
-      return;
-    }
-    supabase.from("mobile_scan_sessions").select("user_id, expires_at").eq("token", token).single().then(({ data }) => {
-      if (!data || data.user_id !== user.id || new Date(data.expires_at) < new Date()) {
-        setSessionOk(false);
-      } else {
-        setSessionOk(true);
-      }
-    });
-  }, [token, user, loading, navigate]);
+    getSession({ data: { token } })
+      .then((r) => { setValid(true); if (r.invoice) setInvoice(r.invoice); })
+      .catch(() => setValid(false));
+  }, [token]);
+
+  useEffect(() => {
+    const payload = buildEpcQr(invoice);
+    if (!payload) { setQr(""); return; }
+    QRCode.toDataURL(payload, { width: 280, margin: 1 }).then(setQr).catch(() => setQr(""));
+  }, [invoice]);
 
   const handle = async (file: File) => {
-    if (!user) return;
     setBusy(true);
     try {
       setStage("Uploaden…");
-      const ext = file.name.split(".").pop() ?? "jpg";
-      const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("invoice-scans").upload(path, file, {
-        contentType: file.type, upsert: false,
-      });
-      if (upErr) throw upErr;
-
-      setStage("AI leest de brief…");
       const base64 = await fileToBase64(file);
-      const { invoice } = await extract({
-        data: { imageBase64: base64, mimeType: file.type || "image/jpeg", scanPath: path },
-      });
-
-      await supabase.from("mobile_scan_sessions").update({
-        status: "delivered", invoice_id: invoice.id,
-      }).eq("token", token);
-
-      toast.success("Verstuurd naar je laptop");
-      setStage("Klaar! Kijk op je laptop.");
+      setStage("AI leest de brief…");
+      const { invoice: inv } = await scan({ data: { token, imageBase64: base64, mimeType: file.type || "image/jpeg" } });
+      setInvoice(inv);
+      toast.success("Factuur ingelezen");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Mislukt");
+    } finally {
       setBusy(false);
       setStage("");
     }
   };
 
-  if (sessionOk === false) {
+  const onPay = async () => {
+    if (!invoice) return;
+    try {
+      await markPaid({ data: { token, invoiceId: invoice.id } });
+      setPaid(true);
+      toast.success("Gemarkeerd als betaald");
+    } catch (e: any) {
+      toast.error(e.message ?? "Mislukt");
+    }
+  };
+
+  if (valid === false) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 text-center">
         <div>
@@ -86,7 +104,7 @@ function MobileScanPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12">
+    <div className="min-h-screen flex flex-col items-center px-6 py-10">
       <div className="flex items-center gap-2 mb-8">
         <Brain className="w-6 h-6 text-primary" />
         <span className="text-lg font-semibold">brain · scan</span>
@@ -96,6 +114,43 @@ function MobileScanPage() {
         <div className="glass-card rounded-2xl p-10 text-center w-full max-w-sm">
           <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-3" />
           <p className="text-sm text-muted-foreground">{stage}</p>
+        </div>
+      ) : invoice ? (
+        <div className="w-full max-w-sm space-y-4">
+          <div className="glass-card rounded-2xl p-5">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">Factuur</p>
+            <h2 className="text-xl font-semibold mt-1">{invoice.supplier || "Onbekend"}</h2>
+            <p className="text-3xl font-semibold mt-2">€ {Number(invoice.amount ?? 0).toFixed(2)}</p>
+            {invoice.iban && <p className="text-xs font-mono text-muted-foreground mt-2">{invoice.iban}</p>}
+            {invoice.structured_reference && <p className="text-xs font-mono text-muted-foreground">{invoice.structured_reference}</p>}
+          </div>
+
+          {qr && !paid && (
+            <div className="glass-card rounded-2xl p-5 text-center">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">Betaal met je bank-app</p>
+              <img src={qr} alt="EPC betaal-QR" className="rounded-xl bg-white p-3 mx-auto" />
+              <p className="text-xs text-muted-foreground mt-3">
+                Open je banking-app (KBC, Belfius, BNP, ING, Argenta…) → scannen → bevestigen.
+              </p>
+            </div>
+          )}
+
+          {paid ? (
+            <div className="glass-card rounded-2xl p-5 text-center">
+              <div className="w-12 h-12 rounded-full bg-success/15 flex items-center justify-center mx-auto mb-2">
+                <Check className="w-6 h-6 text-success" />
+              </div>
+              <p className="font-medium">Afgevinkt als betaald</p>
+            </div>
+          ) : (
+            <Button className="w-full glow-ring h-12" onClick={onPay}>
+              <CreditCard className="w-4 h-4 mr-2" /> Markeer als betaald
+            </Button>
+          )}
+
+          <Button variant="ghost" className="w-full" onClick={() => { setInvoice(null); }}>
+            Nog een brief scannen
+          </Button>
         </div>
       ) : (
         <>

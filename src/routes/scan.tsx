@@ -116,22 +116,20 @@ function ScanPage() {
             <p className="text-sm text-muted-foreground">PDF of foto uit Doccle, mail, etc.</p>
           </button>
 
-          {isDesktop && (
-            <button
-              onClick={startMobileSession}
-              className="md:col-span-2 glass-card rounded-2xl p-6 text-left hover:border-primary/40 transition-colors flex items-center gap-4"
-            >
-              <div className="flex items-center gap-1.5">
-                <Monitor className="w-6 h-6 text-muted-foreground" />
-                <QrCode className="w-5 h-5 text-primary" />
-                <Smartphone className="w-6 h-6 text-muted-foreground" />
-              </div>
-              <div>
-                <h2 className="font-semibold">Scannen vanaf je gsm</h2>
-                <p className="text-sm text-muted-foreground">QR-code tonen — scan met je telefoon en de foto landt hier.</p>
-              </div>
-            </button>
-          )}
+          <button
+            onClick={startMobileSession}
+            className="md:col-span-2 glass-card rounded-2xl p-6 text-left hover:border-primary/40 transition-colors flex items-center gap-4"
+          >
+            <div className="flex items-center gap-1.5">
+              <Monitor className="w-6 h-6 text-muted-foreground" />
+              <QrCode className="w-5 h-5 text-primary" />
+              <Smartphone className="w-6 h-6 text-muted-foreground" />
+            </div>
+            <div>
+              <h2 className="font-semibold">Scannen vanaf je gsm</h2>
+              <p className="text-sm text-muted-foreground">QR tonen — scan met je telefoon, betaal er meteen mee.</p>
+            </div>
+          </button>
         </div>
       )}
 
