@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowLeft, Check, Trash2, Sparkles, ExternalLink } from "lucide-react";
+import { ArrowLeft, Check, Trash2, Sparkles, ExternalLink, Loader2 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import { categorizeInvoice, INVOICE_CATEGORIES } from "@/lib/invoice-ai.functions";
+import { formatMoney } from "@/lib/format";
 
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 type Account = Database["public"]["Tables"]["accounts"]["Row"];
