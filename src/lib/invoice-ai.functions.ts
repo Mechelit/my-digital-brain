@@ -11,16 +11,18 @@ const CATEGORIES = [
   "Zakelijk", "Bank & Financieel", "Onderhoud & Wonen", "Overig",
 ] as const;
 
-const SYSTEM = `Je bent een expert in het analyseren van Belgische facturen en betalingen.
+const SYSTEM = `Je bent een expert in het analyseren van Belgische facturen, betalingen, creditnota's en terugbetalingen.
 Geef terug:
-- description: 1-2 zinnen Nederlands die uitlegt wat dit is en waarvoor betaald wordt
+- description: 1-2 zinnen Nederlands die uitlegt wat dit is en waarvoor (terug)betaald wordt
 - category: kies EXACT één uit: ${CATEGORIES.join(", ")}
+- is_refund: true als dit een creditnota / terugbetaling / refund is (geld komt naar de gebruiker), anders false
 
-Output ALLEEN JSON: {"description": "...", "category": "..."}`;
+Output ALLEEN JSON: {"description": "...", "category": "...", "is_refund": false}`;
 
 const Schema = z.object({
   description: z.string(),
   category: z.enum(CATEGORIES),
+  is_refund: z.boolean().optional().default(false),
 });
 
 export const categorizeInvoice = createServerFn({ method: "POST" })
