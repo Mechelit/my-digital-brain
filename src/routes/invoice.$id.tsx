@@ -181,3 +181,48 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     </div>
   );
 }
+
+function AISection({ invoice, form, setForm, onUpdated }: { invoice: Invoice; form: Partial<Invoice>; setForm: (f: Partial<Invoice>) => void; onUpdated: () => void }) {
+  const runAI = useServerFn(categorizeInvoice);
+  const mut = useMutation({
+    mutationFn: () => runAI({ data: { id: invoice.id } }),
+    onSuccess: (r) => {
+      setForm({ ...form, category: r.category, ai_description: r.description });
+      onUpdated();
+      toast.success("AI-analyse klaar");
+    },
+    onError: (e: any) => toast.error(e.message ?? "AI-analyse mislukt"),
+  });
+
+  return (
+    <div className="glass-card rounded-2xl p-6 mb-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-primary" />
+          <h2 className="font-semibold">AI-analyse</h2>
+        </div>
+        <Button size="sm" variant="secondary" onClick={() => mut.mutate()} disabled={mut.isPending}>
+          {mut.isPending ? "Analyseren..." : invoice.ai_description ? "Opnieuw" : "Analyseer"}
+        </Button>
+      </div>
+      <Field label="Categorie">
+        <select
+          className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm"
+          value={form.category ?? ""}
+          onChange={(e) => setForm({ ...form, category: e.target.value || null })}
+        >
+          <option value="">— Geen categorie —</option>
+          {INVOICE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </Field>
+      <Field label="Beschrijving">
+        <textarea
+          className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm min-h-[70px]"
+          value={form.ai_description ?? ""}
+          onChange={(e) => setForm({ ...form, ai_description: e.target.value })}
+          placeholder="Korte uitleg waar de betaling voor is..."
+        />
+      </Field>
+    </div>
+  );
+}
