@@ -1,6 +1,7 @@
 import type { Database } from "@/integrations/supabase/types";
 import { Link } from "@tanstack/react-router";
 import { Calendar, FileText } from "lucide-react";
+import { formatMoney } from "@/lib/format";
 
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 
