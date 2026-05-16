@@ -187,9 +187,9 @@ function AISection({ invoice, form, setForm, onUpdated }: { invoice: Invoice; fo
   const mut = useMutation({
     mutationFn: () => runAI({ data: { id: invoice.id } }),
     onSuccess: (r) => {
-      setForm({ ...form, category: r.category, ai_description: r.description });
+      setForm({ ...form, category: r.category, ai_description: r.description, is_refund: r.is_refund ?? false });
       onUpdated();
-      toast.success("AI-analyse klaar");
+      toast.success(r.is_refund ? "Herkend als terugbetaling" : "AI-analyse klaar");
     },
     onError: (e: any) => toast.error(e.message ?? "AI-analyse mislukt"),
   });
