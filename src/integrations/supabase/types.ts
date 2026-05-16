@@ -44,6 +44,54 @@ export type Database = {
         }
         Relationships: []
       }
+      contracts: {
+        Row: {
+          counterparty: string | null
+          created_at: string
+          currency: string
+          end_date: string | null
+          file_path: string | null
+          id: string
+          monthly_amount: number | null
+          name: string
+          notes: string | null
+          start_date: string | null
+          type: Database["public"]["Enums"]["contract_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          counterparty?: string | null
+          created_at?: string
+          currency?: string
+          end_date?: string | null
+          file_path?: string | null
+          id?: string
+          monthly_amount?: number | null
+          name: string
+          notes?: string | null
+          start_date?: string | null
+          type?: Database["public"]["Enums"]["contract_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          counterparty?: string | null
+          created_at?: string
+          currency?: string
+          end_date?: string | null
+          file_path?: string | null
+          id?: string
+          monthly_amount?: number | null
+          name?: string
+          notes?: string | null
+          start_date?: string | null
+          type?: Database["public"]["Enums"]["contract_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       deposits: {
         Row: {
           amount: number
@@ -329,6 +377,13 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      contract_type:
+        | "huur"
+        | "abonnement"
+        | "verzekering"
+        | "lening"
+        | "werk"
+        | "ander"
       expense_frequency: "monthly" | "quarterly" | "biannual" | "yearly"
       expense_scope: "prive" | "zakelijk"
       invoice_source: "scan" | "upload" | "email" | "mobile_scan"
@@ -460,6 +515,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      contract_type: [
+        "huur",
+        "abonnement",
+        "verzekering",
+        "lening",
+        "werk",
+        "ander",
+      ],
       expense_frequency: ["monthly", "quarterly", "biannual", "yearly"],
       expense_scope: ["prive", "zakelijk"],
       invoice_source: ["scan", "upload", "email", "mobile_scan"],
