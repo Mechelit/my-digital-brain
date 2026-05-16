@@ -230,6 +230,11 @@ function InvoiceDetail() {
         onUpdated={() => qc.invalidateQueries({ queryKey: ["invoice", id] })}
         form={form}
         setForm={setForm}
+        onMovedToContract={() => {
+          qc.invalidateQueries({ queryKey: ["invoices"] });
+          qc.invalidateQueries({ queryKey: ["contracts"] });
+          navigate({ to: "/contracten" });
+        }}
       />
 
       <div className="glass-card rounded-2xl p-6 space-y-4">
@@ -375,16 +380,23 @@ function AISection({
   form,
   setForm,
   onUpdated,
+  onMovedToContract,
 }: {
   invoice: Invoice;
   form: Partial<Invoice>;
   setForm: (f: Partial<Invoice>) => void;
   onUpdated: () => void;
+  onMovedToContract: () => void;
 }) {
   const runAI = useServerFn(categorizeInvoice);
   const mut = useMutation({
     mutationFn: () => runAI({ data: { id: invoice.id } }),
     onSuccess: (r) => {
+      if (r.moved_to_contract) {
+        toast.success("Verplaatst naar contracten");
+        onMovedToContract();
+        return;
+      }
       setForm({
         ...form,
         category: r.category,
