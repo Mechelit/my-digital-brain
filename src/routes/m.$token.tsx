@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import { mobileGetSession, mobileScanExtract, mobileMarkPaid } from "@/lib/mobile-scan.functions";
 import { Camera, Loader2, Brain, Check, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatMoney } from "@/lib/format";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/m/$token")({ component: MobileScanPage });
@@ -120,7 +121,7 @@ function MobileScanPage() {
           <div className="glass-card rounded-2xl p-5">
             <p className="text-xs uppercase tracking-wider text-muted-foreground">Factuur</p>
             <h2 className="text-xl font-semibold mt-1">{invoice.supplier || "Onbekend"}</h2>
-            <p className="text-3xl font-semibold mt-2">€ {Number(invoice.amount ?? 0).toFixed(2)}</p>
+            <p className="text-3xl font-semibold mt-2">{formatMoney(invoice.amount, invoice.currency)}</p>
             {invoice.iban && <p className="text-xs font-mono text-muted-foreground mt-2">{invoice.iban}</p>}
             {invoice.structured_reference && <p className="text-xs font-mono text-muted-foreground">{invoice.structured_reference}</p>}
           </div>

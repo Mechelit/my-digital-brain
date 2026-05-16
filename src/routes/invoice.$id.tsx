@@ -8,9 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowLeft, Check, Trash2, Sparkles, ExternalLink } from "lucide-react";
+import { ArrowLeft, Check, Trash2, Sparkles, ExternalLink, Loader2 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import { categorizeInvoice, INVOICE_CATEGORIES } from "@/lib/invoice-ai.functions";
+import { formatMoney } from "@/lib/format";
 
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 type Account = Database["public"]["Tables"]["accounts"]["Row"];
@@ -95,23 +96,38 @@ function InvoiceDetail() {
           <p className="text-xs uppercase tracking-wider text-muted-foreground">{form.is_refund ? "Terugbetaling / Creditnota" : "Factuur"}</p>
           <h1 className="text-3xl font-semibold tracking-tight mt-1">
             {form.supplier || "Naam ontbreekt"}
-            {form.is_refund && form.amount ? <span className="ml-3 text-emerald-400 text-xl">+€{Number(form.amount).toFixed(2)}</span> : null}
+            {form.amount != null ? (
+              <span className={`ml-3 text-xl ${form.is_refund ? "text-emerald-400" : "text-muted-foreground"}`}>
+                {form.is_refund ? "+" : ""}{formatMoney(form.amount as any, form.currency)}
+              </span>
+            ) : null}
           </h1>
         </div>
         <Button size="sm" variant="ghost" onClick={del}><Trash2 className="w-4 h-4" /></Button>
       </div>
 
-      {scanUrl && (
-        <div className="glass-card rounded-2xl p-3 mb-6 space-y-2">
-          <div className="flex items-center justify-between px-2">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Originele scan</p>
-            <a href={scanUrl} target="_blank" rel="noreferrer" className="text-xs text-primary flex items-center gap-1 hover:underline">
-              Openen <ExternalLink className="w-3 h-3" />
-            </a>
+      {scanUrl && (() => {
+        const isPdf = (invoice.scan_path ?? "").toLowerCase().endsWith(".pdf");
+        return (
+          <div className="glass-card rounded-2xl p-3 mb-6 space-y-2">
+            <div className="flex items-center justify-between px-2">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">Originele scan</p>
+              <a href={scanUrl} target="_blank" rel="noreferrer" className="text-xs text-primary flex items-center gap-1 hover:underline">
+                Openen <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+            {isPdf ? (
+              <object data={scanUrl} type="application/pdf" className="w-full h-[520px] rounded-xl bg-background">
+                <div className="p-8 text-center text-sm text-muted-foreground">
+                  PDF kan niet inline getoond worden. <a href={scanUrl} target="_blank" rel="noreferrer" className="text-primary underline">Open in nieuw tabblad</a>
+                </div>
+              </object>
+            ) : (
+              <img src={scanUrl} alt="Factuur scan" className="w-full max-h-[520px] object-contain rounded-xl bg-background" />
+            )}
           </div>
-          <iframe src={scanUrl} className="w-full h-[420px] rounded-xl bg-background" title="Factuur scan" />
-        </div>
-      )}
+        );
+      })()}
 
       <AISection invoice={invoice} onUpdated={() => qc.invalidateQueries({ queryKey: ["invoice", id] })} form={form} setForm={setForm} />
 
@@ -120,8 +136,11 @@ function InvoiceDetail() {
           <Field label="Leverancier">
             <Input value={form.supplier ?? ""} onChange={(e) => setForm({ ...form, supplier: e.target.value })} />
           </Field>
-          <Field label="Bedrag (€)">
-            <Input type="number" step="0.01" value={form.amount ?? ""} onChange={(e) => setForm({ ...form, amount: e.target.value ? parseFloat(e.target.value) : null })} />
+          <Field label={`Bedrag (${(form.currency || "EUR").toUpperCase()})`}>
+            <div className="flex gap-2">
+              <Input type="number" step="0.01" value={form.amount ?? ""} onChange={(e) => setForm({ ...form, amount: e.target.value ? parseFloat(e.target.value) : null })} className="flex-1" />
+              <Input value={form.currency ?? "EUR"} onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase().slice(0,3) })} className="w-20 font-mono uppercase" />
+            </div>
           </Field>
         </div>
         <Field label="IBAN">
@@ -192,10 +211,17 @@ function AISection({ invoice, form, setForm, onUpdated }: { invoice: Invoice; fo
     onSuccess: (r) => {
       setForm({ ...form, category: r.category, ai_description: r.description, is_refund: r.is_refund ?? false });
       onUpdated();
-      toast.success(r.is_refund ? "Herkend als terugbetaling" : "AI-analyse klaar");
     },
     onError: (e: any) => toast.error(e.message ?? "AI-analyse mislukt"),
   });
+
+  // Auto-analyse zodra factuur geladen is en nog geen AI-beschrijving heeft
+  useEffect(() => {
+    if (!invoice.ai_description && !mut.isPending && !mut.isSuccess && !mut.isError) {
+      mut.mutate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoice.id]);
 
   return (
     <div className="glass-card rounded-2xl p-6 mb-4 space-y-4">
@@ -203,9 +229,10 @@ function AISection({ invoice, form, setForm, onUpdated }: { invoice: Invoice; fo
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-primary" />
           <h2 className="font-semibold">AI-analyse</h2>
+          {mut.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
         </div>
-        <Button size="sm" variant="secondary" onClick={() => mut.mutate()} disabled={mut.isPending}>
-          {mut.isPending ? "Analyseren..." : invoice.ai_description ? "Opnieuw" : "Analyseer"}
+        <Button size="sm" variant="ghost" onClick={() => mut.mutate()} disabled={mut.isPending}>
+          {mut.isPending ? "Bezig…" : "Opnieuw"}
         </Button>
       </div>
       <Field label="Categorie">
