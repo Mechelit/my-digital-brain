@@ -157,6 +157,37 @@ function InvoiceDetail() {
         </div>
       </div>
 
+      {invoice.status !== "paid" && !form.is_refund && (
+        <Button
+          size="lg"
+          className="w-full h-14 text-base glow-ring mb-6"
+          onClick={() => setPayOpen(true)}
+        >
+          <CreditCard className="w-5 h-5 mr-2" />
+          Betaal {form.amount != null ? formatWithEuroEstimate(form.amount as any, form.currency) : ""}
+        </Button>
+      )}
+
+      <PayDialog
+        open={payOpen}
+        onOpenChange={setPayOpen}
+        invoice={invoice}
+        form={form}
+        accounts={accounts}
+        defaultAccountId={form.paid_from_account ?? accounts.find((a) => a.is_default)?.id ?? accounts[0]?.id ?? null}
+        onConfirm={async (accountId) => {
+          await save.mutateAsync({
+            ...form,
+            status: "paid",
+            paid_at: new Date().toISOString(),
+            paid_from_account: accountId,
+          });
+          setPayOpen(false);
+          toast.success("Gemarkeerd als betaald");
+          navigate({ to: "/" });
+        }}
+      />
+
       {scanUrl &&
         (() => {
           const isPdf = (invoice.scan_path ?? "").toLowerCase().endsWith(".pdf");
