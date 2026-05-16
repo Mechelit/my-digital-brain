@@ -197,23 +197,11 @@ function InvoiceDetail() {
                 </a>
               </div>
               {isPdf ? (
-                <object
-                  data={scanUrl}
-                  type="application/pdf"
-                  className="w-full h-[520px] rounded-xl bg-background"
-                >
-                  <div className="p-8 text-center text-sm text-muted-foreground">
-                    PDF kan niet inline getoond worden.{" "}
-                    <a
-                      href={scanUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-primary underline"
-                    >
-                      Open in nieuw tabblad
-                    </a>
-                  </div>
-                </object>
+                <iframe
+                  src={`${scanUrl}#view=FitH&toolbar=1`}
+                  title="Factuur PDF"
+                  className="w-full h-[80vh] min-h-[600px] rounded-xl bg-background border-0"
+                />
               ) : (
                 <img
                   src={scanUrl}
