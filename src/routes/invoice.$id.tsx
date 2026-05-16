@@ -375,16 +375,23 @@ function AISection({
   form,
   setForm,
   onUpdated,
+  onMovedToContract,
 }: {
   invoice: Invoice;
   form: Partial<Invoice>;
   setForm: (f: Partial<Invoice>) => void;
   onUpdated: () => void;
+  onMovedToContract: () => void;
 }) {
   const runAI = useServerFn(categorizeInvoice);
   const mut = useMutation({
     mutationFn: () => runAI({ data: { id: invoice.id } }),
     onSuccess: (r) => {
+      if (r.moved_to_contract) {
+        toast.success("Verplaatst naar contracten");
+        onMovedToContract();
+        return;
+      }
       setForm({
         ...form,
         category: r.category,
