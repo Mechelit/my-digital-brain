@@ -230,6 +230,11 @@ function InvoiceDetail() {
         onUpdated={() => qc.invalidateQueries({ queryKey: ["invoice", id] })}
         form={form}
         setForm={setForm}
+        onMovedToContract={() => {
+          qc.invalidateQueries({ queryKey: ["invoices"] });
+          qc.invalidateQueries({ queryKey: ["contracts"] });
+          navigate({ to: "/contracten" });
+        }}
       />
 
       <div className="glass-card rounded-2xl p-6 space-y-4">
