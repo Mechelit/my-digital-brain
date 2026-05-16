@@ -200,6 +200,41 @@ function FinancienPage() {
         </div>
         <AddDeposit onAdded={() => qc.invalidateQueries({ queryKey: ["deposits"] })} userId={user?.id} />
       </section>
+
+      {/* Uitgaven per categorie */}
+      <section>
+        <h2 className="text-lg font-semibold mb-1 flex items-center gap-2"><PieChart className="w-4 h-4 text-primary" />Uitgaven per categorie</h2>
+        <p className="text-xs text-muted-foreground mb-3">Op basis van betaalde facturen, automatisch gecategoriseerd door AI.</p>
+        {byCategory.length === 0 ? (
+          <div className="glass-card rounded-xl p-4 text-sm text-muted-foreground">
+            Nog geen betaalde facturen. Open een factuur en klik "Analyseer" om te categoriseren.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {byCategory.map(([cat, v]) => {
+              const pct = totalSpent ? (v.total / totalSpent) * 100 : 0;
+              return (
+                <div key={cat} className="glass-card rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <p className="text-sm font-medium">{cat}</p>
+                      <p className="text-xs text-muted-foreground">{v.count} {v.count === 1 ? "factuur" : "facturen"}</p>
+                    </div>
+                    <p className="tabular-nums font-semibold">{fmt(v.total)}</p>
+                  </div>
+                  <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+            <div className="flex justify-between px-2 pt-2 text-sm">
+              <span className="text-muted-foreground">Totaal uitgegeven</span>
+              <span className="font-semibold tabular-nums">{fmt(totalSpent)}</span>
+            </div>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
