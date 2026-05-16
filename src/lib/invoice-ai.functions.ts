@@ -11,18 +11,25 @@ const CATEGORIES = [
   "Zakelijk", "Bank & Financieel", "Onderhoud & Wonen", "Overig",
 ] as const;
 
-const SYSTEM = `Je bent een expert in het analyseren van Belgische facturen, betalingen, creditnota's en terugbetalingen.
-Geef terug:
-- description: 1-2 zinnen Nederlands die uitlegt wat dit is en waarvoor (terug)betaald wordt
-- category: kies EXACT één uit: ${CATEGORIES.join(", ")}
-- is_refund: true als dit een creditnota / terugbetaling / refund is (geld komt naar de gebruiker), anders false
+const CONTRACT_TYPES = ["huur", "abonnement", "verzekering", "lening", "werk", "ander"] as const;
 
-Output ALLEEN JSON: {"description": "...", "category": "...", "is_refund": false}`;
+const SYSTEM = `Je bent een expert in het analyseren van Belgische facturen, betalingen, creditnota's, terugbetalingen en contracten.
+
+Geef terug:
+- description: 1-2 zinnen Nederlands die uitlegt wat dit is
+- category: kies EXACT één uit: ${CATEGORIES.join(", ")}
+- is_refund: true als dit een creditnota / terugbetaling / refund is (geld komt naar de gebruiker)
+- is_contract: true ALLEEN als het document zélf een CONTRACT / OVEREENKOMST is (bv. huurovereenkomst, abonnementscontract, verzekeringspolis, leningsovereenkomst). Een gewone maandelijkse huurfactuur is GEEN contract.
+- contract_type: indien is_contract=true, kies uit: ${CONTRACT_TYPES.join(", ")}
+
+Output ALLEEN JSON: {"description":"...","category":"...","is_refund":false,"is_contract":false,"contract_type":null}`;
 
 const Schema = z.object({
   description: z.string(),
   category: z.enum(CATEGORIES),
   is_refund: z.boolean().optional().default(false),
+  is_contract: z.boolean().optional().default(false),
+  contract_type: z.enum(CONTRACT_TYPES).nullable().optional(),
 });
 
 export const categorizeInvoice = createServerFn({ method: "POST" })
@@ -52,7 +59,7 @@ Notities: ${inv.notes ?? "—"}`;
         messages.push({
           role: "user",
           content: [
-            { type: "text", text: ctxText + "\n\nAnalyseer deze factuur:" },
+            { type: "text", text: ctxText + "\n\nAnalyseer dit document:" },
             { type: "image_url", image_url: { url: dataUrl } },
           ],
         });
@@ -76,13 +83,53 @@ Notities: ${inv.notes ?? "—"}`;
     const j = await res.json();
     const parsed = Schema.parse(JSON.parse(j.choices?.[0]?.message?.content ?? "{}"));
 
+    // Auto-move contracts naar contracten-tabel
+    if (parsed.is_contract) {
+      let newFilePath: string | null = null;
+      if (inv.scan_path) {
+        const { data: blob } = await supabase.storage.from("invoice-scans").download(inv.scan_path);
+        if (blob) {
+          const ext = inv.scan_path.split(".").pop() ?? "bin";
+          newFilePath = `${userId}/${Date.now()}-contract.${ext}`;
+          await supabase.storage.from("contracts").upload(newFilePath, blob, {
+            contentType: blob.type || "application/octet-stream",
+            upsert: false,
+          });
+          await supabase.storage.from("invoice-scans").remove([inv.scan_path]);
+        }
+      }
+
+      const { data: contract } = await supabase
+        .from("contracts")
+        .insert({
+          user_id: userId,
+          name: inv.supplier ?? "Contract",
+          type: parsed.contract_type ?? "ander",
+          counterparty: inv.supplier ?? null,
+          monthly_amount: inv.amount ?? null,
+          currency: inv.currency ?? "EUR",
+          notes: parsed.description,
+          file_path: newFilePath,
+        })
+        .select("id")
+        .single();
+
+      await supabase.from("invoices").delete().eq("id", data.id);
+
+      return {
+        ...parsed,
+        moved_to_contract: true as const,
+        contract_id: contract?.id ?? null,
+      };
+    }
+
     await supabase.from("invoices").update({
       category: parsed.category,
       ai_description: parsed.description,
       is_refund: parsed.is_refund ?? false,
     }).eq("id", data.id);
 
-    return parsed;
+    return { ...parsed, moved_to_contract: false as const, contract_id: null };
   });
 
 export const INVOICE_CATEGORIES = CATEGORIES;
