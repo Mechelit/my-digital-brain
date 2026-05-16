@@ -402,11 +402,15 @@ function AISection({
   form,
   setForm,
   onUpdated,
+  accepted,
+  onAccept,
 }: {
   invoice: Invoice;
   form: Partial<Invoice>;
   setForm: (f: Partial<Invoice>) => void;
   onUpdated: () => void;
+  accepted: boolean;
+  onAccept: () => Promise<void>;
 }) {
   const runAI = useServerFn(categorizeInvoice);
   const mut = useMutation({
