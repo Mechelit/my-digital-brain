@@ -472,3 +472,162 @@ function AISection({
     </div>
   );
 }
+
+function buildEpcQrPayload(opts: {
+  beneficiary: string;
+  iban: string;
+  amount: number;
+  remittance?: string | null;
+  structured?: string | null;
+  bic?: string | null;
+}) {
+  const amt = Math.max(0, Math.round(opts.amount * 100) / 100);
+  const ref = (opts.structured ?? "").replace(/[^0-9]/g, "");
+  const lines = [
+    "BCD",
+    "002",
+    "1",
+    "SCT",
+    opts.bic ?? "",
+    (opts.beneficiary || "").slice(0, 70),
+    opts.iban.replace(/\s/g, "").toUpperCase(),
+    `EUR${amt.toFixed(2)}`,
+    "",
+    ref ? ref : "",
+    ref ? "" : (opts.remittance ?? "").slice(0, 140),
+  ];
+  return lines.join("\n");
+}
+
+function PayDialog({
+  open,
+  onOpenChange,
+  invoice,
+  form,
+  accounts,
+  defaultAccountId,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  invoice: Invoice;
+  form: Partial<Invoice>;
+  accounts: Account[];
+  defaultAccountId: string | null;
+  onConfirm: (accountId: string | null) => Promise<void>;
+}) {
+  const [accountId, setAccountId] = useState<string | null>(defaultAccountId);
+  const [qr, setQr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setAccountId(defaultAccountId);
+  }, [defaultAccountId, open]);
+
+  const canQr =
+    !!form.iban &&
+    !!form.amount &&
+    (form.currency ?? "EUR").toUpperCase() === "EUR" &&
+    !!form.supplier;
+
+  useEffect(() => {
+    if (!open || !canQr) {
+      setQr(null);
+      return;
+    }
+    const payload = buildEpcQrPayload({
+      beneficiary: form.supplier!,
+      iban: form.iban!,
+      amount: Number(form.amount),
+      remittance: form.free_reference,
+      structured: form.structured_reference,
+      bic: form.bic,
+    });
+    QRCode.toDataURL(payload, { width: 320, margin: 1 }).then(setQr).catch(() => setQr(null));
+  }, [open, canQr, form.iban, form.amount, form.supplier, form.structured_reference, form.free_reference, form.bic, form.currency]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Betaal {form.supplier ?? "factuur"}</DialogTitle>
+          <DialogDescription>
+            Scan de QR met je bank-app of doe de overschrijving handmatig.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {accounts.length > 0 && (
+            <Field label="Vanaf rekening">
+              <select
+                className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm"
+                value={accountId ?? ""}
+                onChange={(e) => setAccountId(e.target.value || null)}
+              >
+                <option value="">— Geen —</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                    {a.iban ? ` · ${a.iban}` : ""}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
+
+          {canQr && qr ? (
+            <div className="flex flex-col items-center gap-2">
+              <img src={qr} alt="EPC betaal QR" className="rounded-xl bg-white p-3" />
+              <p className="text-xs text-muted-foreground text-center">
+                Open je bank-app → Scan QR (KBC, Belfius, ING, Argenta, …)
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              {!canQr
+                ? "Vul IBAN, bedrag (EUR) en leverancier in voor een QR-code."
+                : "QR genereren…"}
+            </p>
+          )}
+
+          <div className="rounded-lg border border-border p-3 text-sm space-y-1 font-mono">
+            <div className="flex justify-between gap-2">
+              <span className="text-muted-foreground">IBAN</span>
+              <span className="truncate">{form.iban || "—"}</span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span className="text-muted-foreground">Bedrag</span>
+              <span>
+                {form.amount != null
+                  ? formatMoney(form.amount as any, form.currency || "EUR")
+                  : "—"}
+              </span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span className="text-muted-foreground">Mededeling</span>
+              <span className="truncate">
+                {form.structured_reference || form.free_reference || "—"}
+              </span>
+            </div>
+          </div>
+
+          <Button
+            className="w-full h-12"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await onConfirm(accountId);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <Check className="w-4 h-4 mr-2" />
+            Ik heb betaald — markeer als betaald
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
