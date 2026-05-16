@@ -8,10 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowLeft, Check, Trash2, Sparkles, ExternalLink, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, Trash2, Sparkles, ExternalLink, Loader2, CreditCard } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 import { categorizeInvoice, INVOICE_CATEGORIES } from "@/lib/invoice-ai.functions";
 import { estimateEuro, formatMoney, formatWithEuroEstimate } from "@/lib/format";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import QRCode from "qrcode";
 
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 type Account = Database["public"]["Tables"]["accounts"]["Row"];
@@ -30,6 +32,7 @@ function InvoiceDetail() {
   const qc = useQueryClient();
   const [form, setForm] = useState<Partial<Invoice>>({});
   const [scanUrl, setScanUrl] = useState<string | null>(null);
+  const [payOpen, setPayOpen] = useState(false);
 
   const { data: invoice } = useQuery({
     queryKey: ["invoice", id],
@@ -153,6 +156,37 @@ function InvoiceDetail() {
           </Button>
         </div>
       </div>
+
+      {invoice.status !== "paid" && !form.is_refund && (
+        <Button
+          size="lg"
+          className="w-full h-14 text-base glow-ring mb-6"
+          onClick={() => setPayOpen(true)}
+        >
+          <CreditCard className="w-5 h-5 mr-2" />
+          Betaal {form.amount != null ? formatWithEuroEstimate(form.amount as any, form.currency) : ""}
+        </Button>
+      )}
+
+      <PayDialog
+        open={payOpen}
+        onOpenChange={setPayOpen}
+        invoice={invoice}
+        form={form}
+        accounts={accounts}
+        defaultAccountId={form.paid_from_account ?? accounts.find((a) => a.is_default)?.id ?? accounts[0]?.id ?? null}
+        onConfirm={async (accountId) => {
+          await save.mutateAsync({
+            ...form,
+            status: "paid",
+            paid_at: new Date().toISOString(),
+            paid_from_account: accountId,
+          });
+          setPayOpen(false);
+          toast.success("Gemarkeerd als betaald");
+          navigate({ to: "/" });
+        }}
+      />
 
       {scanUrl &&
         (() => {
@@ -436,5 +470,164 @@ function AISection({
         />
       </Field>
     </div>
+  );
+}
+
+function buildEpcQrPayload(opts: {
+  beneficiary: string;
+  iban: string;
+  amount: number;
+  remittance?: string | null;
+  structured?: string | null;
+  bic?: string | null;
+}) {
+  const amt = Math.max(0, Math.round(opts.amount * 100) / 100);
+  const ref = (opts.structured ?? "").replace(/[^0-9]/g, "");
+  const lines = [
+    "BCD",
+    "002",
+    "1",
+    "SCT",
+    opts.bic ?? "",
+    (opts.beneficiary || "").slice(0, 70),
+    opts.iban.replace(/\s/g, "").toUpperCase(),
+    `EUR${amt.toFixed(2)}`,
+    "",
+    ref ? ref : "",
+    ref ? "" : (opts.remittance ?? "").slice(0, 140),
+  ];
+  return lines.join("\n");
+}
+
+function PayDialog({
+  open,
+  onOpenChange,
+  invoice,
+  form,
+  accounts,
+  defaultAccountId,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  invoice: Invoice;
+  form: Partial<Invoice>;
+  accounts: Account[];
+  defaultAccountId: string | null;
+  onConfirm: (accountId: string | null) => Promise<void>;
+}) {
+  const [accountId, setAccountId] = useState<string | null>(defaultAccountId);
+  const [qr, setQr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setAccountId(defaultAccountId);
+  }, [defaultAccountId, open]);
+
+  const canQr =
+    !!form.iban &&
+    !!form.amount &&
+    (form.currency ?? "EUR").toUpperCase() === "EUR" &&
+    !!form.supplier;
+
+  useEffect(() => {
+    if (!open || !canQr) {
+      setQr(null);
+      return;
+    }
+    const payload = buildEpcQrPayload({
+      beneficiary: form.supplier!,
+      iban: form.iban!,
+      amount: Number(form.amount),
+      remittance: form.free_reference,
+      structured: form.structured_reference,
+      bic: form.bic,
+    });
+    QRCode.toDataURL(payload, { width: 320, margin: 1 }).then(setQr).catch(() => setQr(null));
+  }, [open, canQr, form.iban, form.amount, form.supplier, form.structured_reference, form.free_reference, form.bic, form.currency]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Betaal {form.supplier ?? "factuur"}</DialogTitle>
+          <DialogDescription>
+            Scan de QR met je bank-app of doe de overschrijving handmatig.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {accounts.length > 0 && (
+            <Field label="Vanaf rekening">
+              <select
+                className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm"
+                value={accountId ?? ""}
+                onChange={(e) => setAccountId(e.target.value || null)}
+              >
+                <option value="">— Geen —</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                    {a.iban ? ` · ${a.iban}` : ""}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
+
+          {canQr && qr ? (
+            <div className="flex flex-col items-center gap-2">
+              <img src={qr} alt="EPC betaal QR" className="rounded-xl bg-white p-3" />
+              <p className="text-xs text-muted-foreground text-center">
+                Open je bank-app → Scan QR (KBC, Belfius, ING, Argenta, …)
+              </p>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              {!canQr
+                ? "Vul IBAN, bedrag (EUR) en leverancier in voor een QR-code."
+                : "QR genereren…"}
+            </p>
+          )}
+
+          <div className="rounded-lg border border-border p-3 text-sm space-y-1 font-mono">
+            <div className="flex justify-between gap-2">
+              <span className="text-muted-foreground">IBAN</span>
+              <span className="truncate">{form.iban || "—"}</span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span className="text-muted-foreground">Bedrag</span>
+              <span>
+                {form.amount != null
+                  ? formatMoney(form.amount as any, form.currency || "EUR")
+                  : "—"}
+              </span>
+            </div>
+            <div className="flex justify-between gap-2">
+              <span className="text-muted-foreground">Mededeling</span>
+              <span className="truncate">
+                {form.structured_reference || form.free_reference || "—"}
+              </span>
+            </div>
+          </div>
+
+          <Button
+            className="w-full h-12"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                await onConfirm(accountId);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <Check className="w-4 h-4 mr-2" />
+            Ik heb betaald — markeer als betaald
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
