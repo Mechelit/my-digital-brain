@@ -86,11 +86,12 @@ function InvoiceDetail() {
 
   const confirmAndPay = async () => {
     const defaultAcc = accounts.find((a) => a.is_default) ?? accounts[0];
+    const accountId = form.paid_from_account ?? defaultAcc?.id ?? null;
     await save.mutateAsync({
       ...form,
       status: "paid",
       paid_at: new Date().toISOString(),
-      paid_from_account: defaultAcc?.id ?? null,
+      paid_from_account: accountId,
     });
     toast.success("Gemarkeerd als betaald");
     navigate({ to: "/" });
@@ -283,13 +284,32 @@ function InvoiceDetail() {
         </Button>
       </div>
 
-      <div className="glass-card rounded-2xl p-6 mt-4">
-        <h2 className="font-semibold mb-1">Bevestig & betaal</h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          {accounts.length === 0
-            ? "Voeg eerst een rekening toe om bij te houden waarvandaan je betaalt."
-            : "Echte bankbetaling via Ponto/Tink (PSD2) komt in fase 2. Voor nu: bevestig dat je betaald hebt en het wordt afgevinkt in je financiën."}
-        </p>
+      <div className="glass-card rounded-2xl p-6 mt-4 space-y-4">
+        <div>
+          <h2 className="font-semibold mb-1">Bevestig & betaal</h2>
+          <p className="text-sm text-muted-foreground">
+            {accounts.length === 0
+              ? "Voeg eerst een rekening toe om bij te houden waarvandaan je betaalt."
+              : "Kies de rekening waarvandaan je betaalt en bevestig."}
+          </p>
+        </div>
+        {accounts.length > 0 && (
+          <Field label="Betaald vanaf rekening">
+            <select
+              className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm"
+              value={form.paid_from_account ?? accounts.find((a) => a.is_default)?.id ?? accounts[0]?.id ?? ""}
+              onChange={(e) => setForm({ ...form, paid_from_account: e.target.value || null })}
+              disabled={invoice.status === "paid"}
+            >
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                  {a.iban ? ` · ${a.iban}` : ""}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
         <Button
           className="w-full glow-ring"
           disabled={invoice.status === "paid"}
