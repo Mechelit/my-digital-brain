@@ -4,6 +4,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQueryClient } from "@tanstack/react-query";
+import { syncGmail } from "@/lib/gmail.functions";
+
+const SYNC_THROTTLE_MS = 2 * 60 * 1000; // max 1x per 2 minuten
 
 const nav = [
   { to: "/", icon: LayoutDashboard, label: "Brain" },
@@ -23,6 +28,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       navigate({ to: "/login" });
     }
   }, [loading, user, location.pathname, navigate]);
+
+  const sync = useServerFn(syncGmail);
+  const qc = useQueryClient();
+  useEffect(() => {
+    if (!user) return;
+    const key = `lastGmailSync:${user.id}`;
+    const last = Number(localStorage.getItem(key) || 0);
+    if (Date.now() - last < SYNC_THROTTLE_MS) return;
+    localStorage.setItem(key, String(Date.now()));
+    sync({})
+      .then((r: any) => {
+        if (r?.imported > 0) {
+          qc.invalidateQueries({ queryKey: ["invoices"] });
+        }
+      })
+      .catch(() => {});
+  }, [user?.id, sync, qc]);
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-muted-foreground">…</div>;
