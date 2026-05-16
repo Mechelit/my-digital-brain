@@ -96,51 +96,55 @@ export const syncGmail = createServerFn({ method: "POST" })
         if (existing) { skipped++; continue; }
 
         const msg = await gmailFetch(`/users/me/messages/${messageId}?format=full`);
-        const pdfs = findPdfParts(msg.payload);
-        if (pdfs.length === 0) { skipped++; continue; }
-
         const headers: any[] = msg.payload?.headers ?? [];
         const subject = headers.find((h: any) => h.name?.toLowerCase() === "subject")?.value ?? "";
         const from = headers.find((h: any) => h.name?.toLowerCase() === "from")?.value ?? "";
+        const isDoccle = /doccle/i.test(from) || /doccle/i.test(subject);
 
-        // Neem eerste PDF
-        const pdf = pdfs[0];
-        const att = await gmailFetch(`/users/me/messages/${messageId}/attachments/${pdf.attachmentId}`);
-        const bytes = decodeB64Url(att.data);
-        if (bytes.length > 8 * 1024 * 1024) { skipped++; continue; }
+        const pdfs = findPdfParts(msg.payload);
+        if (pdfs.length === 0 && !isDoccle) { skipped++; continue; }
 
-        // Upload naar storage
-        const scanPath = `${userId}/gmail/${messageId}-${pdf.filename.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-        await supabase.storage.from("invoice-scans").upload(scanPath, bytes, { contentType: "application/pdf", upsert: true });
-
-        // AI extractie via PDF data URL
-        const dataUrl = `data:application/pdf;base64,${bytes.toString("base64")}`;
-        const aiRes = await fetch(AI_GATEWAY, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            messages: [
-              { role: "system", content: SYSTEM_PROMPT },
-              { role: "user", content: [
-                { type: "text", text: `Email subject: ${subject}\nFrom: ${from}\n\nExtract payment data from this PDF.` },
-                { type: "image_url", image_url: { url: dataUrl } },
-              ]},
-            ],
-            response_format: { type: "json_object" },
-          }),
-        });
-
+        let scanPath: string | null = null;
         let parsed: z.infer<typeof ExtractionSchema> = {};
-        if (aiRes.ok) {
-          const j = await aiRes.json();
-          try { parsed = ExtractionSchema.parse(JSON.parse(j.choices?.[0]?.message?.content ?? "{}")); } catch {}
+
+        if (pdfs.length > 0) {
+          const pdf = pdfs[0];
+          const att = await gmailFetch(`/users/me/messages/${messageId}/attachments/${pdf.attachmentId}`);
+          const bytes = decodeB64Url(att.data);
+          if (bytes.length > 8 * 1024 * 1024) { skipped++; continue; }
+
+          scanPath = `${userId}/gmail/${messageId}-${pdf.filename.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+          await supabase.storage.from("invoice-scans").upload(scanPath, bytes, { contentType: "application/pdf", upsert: true });
+
+          const dataUrl = `data:application/pdf;base64,${bytes.toString("base64")}`;
+          const aiRes = await fetch(AI_GATEWAY, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [
+                { role: "system", content: SYSTEM_PROMPT },
+                { role: "user", content: [
+                  { type: "text", text: `Email subject: ${subject}\nFrom: ${from}\n\nExtract payment data from this PDF.` },
+                  { type: "image_url", image_url: { url: dataUrl } },
+                ]},
+              ],
+              response_format: { type: "json_object" },
+            }),
+          });
+          if (aiRes.ok) {
+            const j = await aiRes.json();
+            try { parsed = ExtractionSchema.parse(JSON.parse(j.choices?.[0]?.message?.content ?? "{}")); } catch {}
+          }
         }
+
+        const isRefund = !!parsed.is_refund || /credit\s*nota|creditnota|refund|terugbetal/i.test(subject);
 
         await supabase.from("invoices").insert({
           user_id: userId,
           source: "email",
           status: "pending",
+          is_refund: isRefund,
           external_id: `gmail:${messageId}`,
           supplier: parsed.supplier ?? from.replace(/<.*>/, "").trim() ?? null,
           amount: parsed.amount ?? null,
@@ -153,7 +157,13 @@ export const syncGmail = createServerFn({ method: "POST" })
           due_date: parsed.due_date ?? null,
           notes: parsed.notes ?? subject.slice(0, 100),
           scan_path: scanPath,
-          raw_extraction: { ...parsed, email_subject: subject, email_from: from } as any,
+          raw_extraction: {
+            ...parsed,
+            email_subject: subject,
+            email_from: from,
+            gmail_message_id: messageId,
+            doccle_notification: isDoccle && pdfs.length === 0 ? true : undefined,
+          } as any,
         });
         imported++;
       } catch (e: any) {
