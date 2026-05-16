@@ -103,14 +103,16 @@ function ScanPage() {
         </div>
       ) : (
         <div className="grid md:grid-cols-2 gap-3">
-          <button
-            onClick={() => camRef.current?.click()}
-            className="glass-card rounded-2xl p-8 text-left hover:border-primary/40 transition-colors group"
-          >
-            <Camera className="w-8 h-8 text-primary mb-4" />
-            <h2 className="font-semibold mb-1">Foto maken</h2>
-            <p className="text-sm text-muted-foreground">Camera opent direct, richt op de brief.</p>
-          </button>
+          {!isDesktop && (
+            <button
+              onClick={() => camRef.current?.click()}
+              className="glass-card rounded-2xl p-8 text-left hover:border-primary/40 transition-colors group"
+            >
+              <Camera className="w-8 h-8 text-primary mb-4" />
+              <h2 className="font-semibold mb-1">Foto maken</h2>
+              <p className="text-sm text-muted-foreground">Camera opent direct, richt op de brief.</p>
+            </button>
+          )}
 
           <button
             onClick={() => fileRef.current?.click()}
@@ -122,8 +124,10 @@ function ScanPage() {
           </button>
 
           <button
+            type="button"
             onClick={startMobileSession}
-            className="md:col-span-2 glass-card rounded-2xl p-6 text-left hover:border-primary/40 transition-colors flex items-center gap-4"
+            disabled={!user}
+            className="md:col-span-2 glass-card rounded-2xl p-6 text-left hover:border-primary/40 transition-colors flex items-center gap-4 disabled:opacity-50"
           >
             <div className="flex items-center gap-1.5">
               <Monitor className="w-6 h-6 text-muted-foreground" />
@@ -131,7 +135,9 @@ function ScanPage() {
               <Smartphone className="w-6 h-6 text-muted-foreground" />
             </div>
             <div>
-              <h2 className="font-semibold">Scannen vanaf je gsm</h2>
+              <h2 className="font-semibold">
+                {isDesktop ? "Scannen vanaf je gsm (aanbevolen)" : "Scannen vanaf je gsm"}
+              </h2>
               <p className="text-sm text-muted-foreground">
                 QR tonen — scan met je telefoon, betaal er meteen mee.
               </p>
