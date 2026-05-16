@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Wallet, Repeat, Lock, Plus, Trash2, Pencil, Check, X, PieChart } from "lucide-react";
 import { toast } from "sonner";
-import { estimateEuro, formatMoney, formatWithEuroEstimate } from "@/lib/format";
+import { estimateEuro, formatMoney } from "@/lib/format";
 
 export const Route = createFileRoute("/financien")({
   component: () => <AppShell><FinancienPage /></AppShell>,
