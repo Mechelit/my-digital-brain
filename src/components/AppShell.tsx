@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { Brain, Camera, Inbox, LayoutDashboard, LogOut, Wallet, Coins } from "lucide-react";
+import { Brain, Camera, Inbox, LayoutDashboard, LogOut, Wallet, Coins, FileText } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
