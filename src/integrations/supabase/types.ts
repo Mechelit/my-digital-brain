@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       accounts: {
         Row: {
+          balance: number
           created_at: string
           iban: string | null
           id: string
@@ -24,6 +25,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          balance?: number
           created_at?: string
           iban?: string | null
           id?: string
@@ -32,11 +34,51 @@ export type Database = {
           user_id: string
         }
         Update: {
+          balance?: number
           created_at?: string
           iban?: string | null
           id?: string
           is_default?: boolean
           name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      deposits: {
+        Row: {
+          amount: number
+          counterparty: string | null
+          created_at: string
+          currency: string
+          id: string
+          name: string
+          notes: string | null
+          paid_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          counterparty?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          name: string
+          notes?: string | null
+          paid_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          counterparty?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          paid_at?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
@@ -174,6 +216,45 @@ export type Database = {
           display_name?: string | null
           id?: string
           inbox_alias?: string
+        }
+        Relationships: []
+      }
+      recurring_expenses: {
+        Row: {
+          account_id: string | null
+          amount: number
+          created_at: string
+          currency: string
+          day_of_month: number
+          id: string
+          name: string
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          created_at?: string
+          currency?: string
+          day_of_month?: number
+          id?: string
+          name: string
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          created_at?: string
+          currency?: string
+          day_of_month?: number
+          id?: string
+          name?: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
