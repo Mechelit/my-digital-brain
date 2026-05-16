@@ -1,0 +1,246 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { AppShell } from "@/components/AppShell";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Wallet, Repeat, Lock, Plus, Trash2, Pencil, Check, X } from "lucide-react";
+import { toast } from "sonner";
+
+export const Route = createFileRoute("/financien")({
+  component: () => <AppShell><FinancienPage /></AppShell>,
+});
+
+const fmt = (n: number) => new Intl.NumberFormat("nl-BE", { style: "currency", currency: "EUR" }).format(n);
+
+function FinancienPage() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+
+  const accounts = useQuery({
+    queryKey: ["accounts-balance"],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("accounts").select("*").order("balance", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const recurring = useQuery({
+    queryKey: ["recurring"],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("recurring_expenses").select("*").order("day_of_month");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const deposits = useQuery({
+    queryKey: ["deposits"],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("deposits").select("*").order("amount", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const totalBalance = (accounts.data ?? []).reduce((s, a: any) => s + Number(a.balance ?? 0), 0);
+  const totalRecurring = (recurring.data ?? []).reduce((s, r: any) => s + Number(r.amount), 0);
+  const totalDeposits = (deposits.data ?? []).reduce((s, d: any) => s + Number(d.amount), 0);
+  const netWorth = totalBalance + totalDeposits;
+
+  return (
+    <div className="max-w-3xl mx-auto px-5 md:px-8 py-8 md:py-12 space-y-10">
+      <header>
+        <h1 className="text-3xl font-semibold tracking-tight">Financiën</h1>
+        <p className="text-muted-foreground mt-1">Saldo, vaste kosten en waarborgen.</p>
+      </header>
+
+      {/* Overzicht */}
+      <section className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="glass-card rounded-2xl p-5">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">Totaal vermogen</p>
+          <p className="text-2xl font-semibold mt-2 tabular-nums">{fmt(netWorth)}</p>
+          <p className="text-xs text-muted-foreground mt-1">incl. waarborgen</p>
+        </div>
+        <div className="glass-card rounded-2xl p-5">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">Liquide</p>
+          <p className="text-2xl font-semibold mt-2 tabular-nums">{fmt(totalBalance)}</p>
+          <p className="text-xs text-muted-foreground mt-1">{accounts.data?.length ?? 0} rekeningen</p>
+        </div>
+        <div className="glass-card rounded-2xl p-5 col-span-2 md:col-span-1">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">Maandelijks vast</p>
+          <p className="text-2xl font-semibold mt-2 tabular-nums">{fmt(totalRecurring)}</p>
+          <p className="text-xs text-muted-foreground mt-1">{recurring.data?.length ?? 0} kosten</p>
+        </div>
+      </section>
+
+      {/* Rekeningen met saldo */}
+      <section>
+        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2"><Wallet className="w-4 h-4 text-primary" />Rekeningen</h2>
+        <div className="space-y-2">
+          {(accounts.data ?? []).map((a: any) => (
+            <AccountRow key={a.id} account={a} onChanged={() => qc.invalidateQueries({ queryKey: ["accounts-balance"] })} />
+          ))}
+        </div>
+      </section>
+
+      {/* Maandelijkse kosten */}
+      <section>
+        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2"><Repeat className="w-4 h-4 text-primary" />Maandelijkse kosten</h2>
+        <div className="space-y-2">
+          {(recurring.data ?? []).map((r: any) => (
+            <div key={r.id} className="glass-card rounded-xl p-4 flex items-center gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="font-medium">{r.name}</p>
+                <p className="text-xs text-muted-foreground">Elke {r.day_of_month}{ord(r.day_of_month)} van de maand</p>
+              </div>
+              <p className="tabular-nums font-semibold">{fmt(Number(r.amount))}</p>
+              <Button size="icon" variant="ghost" onClick={async () => {
+                await supabase.from("recurring_expenses").delete().eq("id", r.id);
+                qc.invalidateQueries({ queryKey: ["recurring"] });
+              }}><Trash2 className="w-4 h-4" /></Button>
+            </div>
+          ))}
+        </div>
+        <AddRecurring onAdded={() => qc.invalidateQueries({ queryKey: ["recurring"] })} userId={user?.id} />
+      </section>
+
+      {/* Waarborgen */}
+      <section>
+        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2"><Lock className="w-4 h-4 text-primary" />Waarborgen</h2>
+        <div className="space-y-2">
+          {(deposits.data ?? []).map((d: any) => (
+            <div key={d.id} className="glass-card rounded-xl p-4 flex items-center gap-4">
+              <div className="flex-1 min-w-0">
+                <p className="font-medium">{d.name}</p>
+                {d.counterparty && <p className="text-xs text-muted-foreground">bij {d.counterparty}</p>}
+              </div>
+              <p className="tabular-nums font-semibold">{fmt(Number(d.amount))}</p>
+              <Button size="icon" variant="ghost" onClick={async () => {
+                await supabase.from("deposits").delete().eq("id", d.id);
+                qc.invalidateQueries({ queryKey: ["deposits"] });
+              }}><Trash2 className="w-4 h-4" /></Button>
+            </div>
+          ))}
+          <div className="glass-card rounded-xl p-4 flex items-center gap-4 opacity-80">
+            <div className="flex-1"><p className="text-sm text-muted-foreground">Totaal vastgezet</p></div>
+            <p className="tabular-nums font-semibold">{fmt(totalDeposits)}</p>
+          </div>
+        </div>
+        <AddDeposit onAdded={() => qc.invalidateQueries({ queryKey: ["deposits"] })} userId={user?.id} />
+      </section>
+    </div>
+  );
+}
+
+function ord(n: number) {
+  if (n === 1) return "ste";
+  if (n === 8) return "ste";
+  return "de";
+}
+
+function AccountRow({ account, onChanged }: { account: any; onChanged: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(String(account.balance ?? 0));
+  const save = async () => {
+    const num = parseFloat(val.replace(",", "."));
+    if (isNaN(num)) return toast.error("Ongeldig bedrag");
+    const { error } = await supabase.from("accounts").update({ balance: num }).eq("id", account.id);
+    if (error) return toast.error(error.message);
+    toast.success("Saldo bijgewerkt");
+    setEditing(false);
+    onChanged();
+  };
+  return (
+    <div className="glass-card rounded-xl p-4 flex items-center gap-4">
+      <Wallet className="w-5 h-5 text-primary" />
+      <div className="flex-1 min-w-0">
+        <p className="font-medium">{account.name}</p>
+        {account.iban && <p className="text-xs font-mono text-muted-foreground">{account.iban}</p>}
+      </div>
+      {editing ? (
+        <>
+          <Input value={val} onChange={(e) => setVal(e.target.value)} className="w-32 text-right tabular-nums" autoFocus />
+          <Button size="icon" variant="ghost" onClick={save}><Check className="w-4 h-4" /></Button>
+          <Button size="icon" variant="ghost" onClick={() => { setEditing(false); setVal(String(account.balance)); }}><X className="w-4 h-4" /></Button>
+        </>
+      ) : (
+        <>
+          <p className="tabular-nums font-semibold">{fmt(Number(account.balance ?? 0))}</p>
+          <Button size="icon" variant="ghost" onClick={() => setEditing(true)}><Pencil className="w-4 h-4" /></Button>
+        </>
+      )}
+    </div>
+  );
+}
+
+function AddRecurring({ onAdded, userId }: { onAdded: () => void; userId?: string }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [amount, setAmount] = useState("");
+  const [day, setDay] = useState("1");
+  const add = useMutation({
+    mutationFn: async () => {
+      if (!userId) return;
+      const { error } = await supabase.from("recurring_expenses").insert({
+        user_id: userId, name, amount: parseFloat(amount.replace(",", ".")), day_of_month: parseInt(day),
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setName(""); setAmount(""); setDay("1"); setOpen(false);
+      toast.success("Maandelijkse kost toegevoegd");
+      onAdded();
+    },
+  });
+  if (!open) return <Button variant="ghost" size="sm" className="mt-3" onClick={() => setOpen(true)}><Plus className="w-4 h-4 mr-1" />Maandelijkse kost</Button>;
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); add.mutate(); }} className="glass-card rounded-xl p-4 mt-3 space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="col-span-2"><Label>Naam</Label><Input value={name} onChange={(e) => setName(e.target.value)} required /></div>
+        <div><Label>Bedrag (€)</Label><Input value={amount} onChange={(e) => setAmount(e.target.value)} required /></div>
+        <div><Label>Dag van de maand</Label><Input type="number" min={1} max={31} value={day} onChange={(e) => setDay(e.target.value)} /></div>
+      </div>
+      <div className="flex gap-2"><Button type="submit" disabled={add.isPending}>Toevoegen</Button><Button type="button" variant="ghost" onClick={() => setOpen(false)}>Annuleren</Button></div>
+    </form>
+  );
+}
+
+function AddDeposit({ onAdded, userId }: { onAdded: () => void; userId?: string }) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [counterparty, setCounterparty] = useState("");
+  const [amount, setAmount] = useState("");
+  const add = useMutation({
+    mutationFn: async () => {
+      if (!userId) return;
+      const { error } = await supabase.from("deposits").insert({
+        user_id: userId, name, counterparty: counterparty || null, amount: parseFloat(amount.replace(",", ".")),
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setName(""); setCounterparty(""); setAmount(""); setOpen(false);
+      toast.success("Waarborg toegevoegd");
+      onAdded();
+    },
+  });
+  if (!open) return <Button variant="ghost" size="sm" className="mt-3" onClick={() => setOpen(true)}><Plus className="w-4 h-4 mr-1" />Waarborg</Button>;
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); add.mutate(); }} className="glass-card rounded-xl p-4 mt-3 space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <div><Label>Naam</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="bv. Waarborg auto" required /></div>
+        <div><Label>Bij wie</Label><Input value={counterparty} onChange={(e) => setCounterparty(e.target.value)} placeholder="bv. MHC Mobility" /></div>
+        <div className="col-span-2"><Label>Bedrag (€)</Label><Input value={amount} onChange={(e) => setAmount(e.target.value)} required /></div>
+      </div>
+      <div className="flex gap-2"><Button type="submit" disabled={add.isPending}>Toevoegen</Button><Button type="button" variant="ghost" onClick={() => setOpen(false)}>Annuleren</Button></div>
+    </form>
+  );
+}
