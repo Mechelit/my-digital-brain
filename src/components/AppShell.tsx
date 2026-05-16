@@ -4,6 +4,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useEffect } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQueryClient } from "@tanstack/react-query";
+import { syncGmail } from "@/lib/gmail.functions";
+
+const SYNC_THROTTLE_MS = 2 * 60 * 1000; // max 1x per 2 minuten
 
 const nav = [
   { to: "/", icon: LayoutDashboard, label: "Brain" },
