@@ -227,33 +227,123 @@ function ContractsPage() {
             <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-3">{group.label}</h2>
             <div className="space-y-2">
               {group.items.map((c) => (
-                <div key={c.id} className="glass-card rounded-xl p-4 flex items-center gap-4">
-                  <FileText className="w-5 h-5 text-primary shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{c.name}</div>
-                    <div className="text-xs text-muted-foreground truncate">
-                      {[
-                        c.counterparty,
-                        c.monthly_amount ? `${formatMoney(Number(c.monthly_amount), c.currency)}/maand` : null,
-                        c.start_date ? `vanaf ${c.start_date}` : null,
-                        c.end_date ? `tot ${c.end_date}` : null,
-                      ].filter(Boolean).join(" · ")}
-                    </div>
-                  </div>
-                  {c.file_path && (
-                    <Button size="sm" variant="ghost" onClick={() => openFile(c.file_path!)}>
-                      <ExternalLink className="w-4 h-4" />
-                    </Button>
-                  )}
-                  <Button size="sm" variant="ghost" onClick={() => del(c)}>
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
+                <ContractRow key={c.id} contract={c} onOpen={openFile} onDelete={del} userId={user?.id} onUploaded={() => qc.invalidateQueries({ queryKey: ["contracts"] })} />
               ))}
             </div>
           </section>
         ))}
       </div>
+    </div>
+  );
+}
+
+function ContractRow({
+  contract: c,
+  onOpen,
+  onDelete,
+  userId,
+  onUploaded,
+}: {
+  contract: Contract;
+  onOpen: (p: string) => void;
+  onDelete: (c: Contract) => void;
+  userId?: string;
+  onUploaded: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const ensurePreview = async () => {
+    if (!c.file_path || previewUrl) return;
+    const { data } = await supabase.storage.from("contracts").createSignedUrl(c.file_path, 3600);
+    if (data) setPreviewUrl(data.signedUrl);
+  };
+
+  const handleCardClick = async () => {
+    if (!c.file_path) return;
+    setOpen((v) => !v);
+    await ensurePreview();
+  };
+
+  const handleUpload = async (file: File) => {
+    if (!userId) return;
+    setUploading(true);
+    try {
+      const path = `${userId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const { error: upErr } = await supabase.storage.from("contracts").upload(path, file);
+      if (upErr) throw upErr;
+      const { error: dbErr } = await supabase.from("contracts").update({ file_path: path }).eq("id", c.id);
+      if (dbErr) throw dbErr;
+      toast.success("Document toegevoegd");
+      onUploaded();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const isImage = c.file_path && /\.(png|jpe?g|webp|gif|heic)$/i.test(c.file_path);
+
+  return (
+    <div className="glass-card rounded-xl overflow-hidden">
+      <div className="p-4 flex items-center gap-4">
+        <button
+          type="button"
+          onClick={handleCardClick}
+          className="flex items-center gap-4 flex-1 min-w-0 text-left hover:opacity-80 transition disabled:cursor-default"
+          disabled={!c.file_path}
+        >
+          <FileText className="w-5 h-5 text-primary shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="font-medium truncate">{c.name}</div>
+            <div className="text-xs text-muted-foreground truncate">
+              {[
+                c.counterparty,
+                c.monthly_amount ? `${formatMoney(Number(c.monthly_amount), c.currency)}/maand` : null,
+                c.start_date ? `vanaf ${c.start_date}` : null,
+                c.end_date ? `tot ${c.end_date}` : null,
+                !c.file_path ? "geen document" : null,
+              ].filter(Boolean).join(" · ")}
+            </div>
+          </div>
+        </button>
+        {c.file_path ? (
+          <Button size="sm" variant="ghost" onClick={() => onOpen(c.file_path!)} title="Open in nieuw tabblad">
+            <ExternalLink className="w-4 h-4" />
+          </Button>
+        ) : (
+          <label className="inline-flex">
+            <Button size="sm" variant="ghost" asChild>
+              <span className="cursor-pointer">
+                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              </span>
+            </Button>
+            <input
+              type="file"
+              accept="image/*,application/pdf"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleUpload(f);
+              }}
+            />
+          </label>
+        )}
+        <Button size="sm" variant="ghost" onClick={() => onDelete(c)}>
+          <Trash2 className="w-4 h-4" />
+        </Button>
+      </div>
+      {open && c.file_path && previewUrl && (
+        <div className="border-t border-border bg-background/40">
+          {isImage ? (
+            <img src={previewUrl} alt={c.name} className="w-full max-h-[70vh] object-contain" />
+          ) : (
+            <iframe src={previewUrl} title={c.name} className="w-full h-[70vh]" />
+          )}
+        </div>
+      )}
     </div>
   );
 }
