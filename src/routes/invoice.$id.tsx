@@ -92,8 +92,11 @@ function InvoiceDetail() {
 
       <div className="flex items-start justify-between mb-6">
         <div>
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Factuur</p>
-          <h1 className="text-3xl font-semibold tracking-tight mt-1">{form.supplier || "Naam ontbreekt"}</h1>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">{form.is_refund ? "Terugbetaling / Creditnota" : "Factuur"}</p>
+          <h1 className="text-3xl font-semibold tracking-tight mt-1">
+            {form.supplier || "Naam ontbreekt"}
+            {form.is_refund && form.amount ? <span className="ml-3 text-emerald-400 text-xl">+€{Number(form.amount).toFixed(2)}</span> : null}
+          </h1>
         </div>
         <Button size="sm" variant="ghost" onClick={del}><Trash2 className="w-4 h-4" /></Button>
       </div>
@@ -187,9 +190,9 @@ function AISection({ invoice, form, setForm, onUpdated }: { invoice: Invoice; fo
   const mut = useMutation({
     mutationFn: () => runAI({ data: { id: invoice.id } }),
     onSuccess: (r) => {
-      setForm({ ...form, category: r.category, ai_description: r.description });
+      setForm({ ...form, category: r.category, ai_description: r.description, is_refund: r.is_refund ?? false });
       onUpdated();
-      toast.success("AI-analyse klaar");
+      toast.success(r.is_refund ? "Herkend als terugbetaling" : "AI-analyse klaar");
     },
     onError: (e: any) => toast.error(e.message ?? "AI-analyse mislukt"),
   });
@@ -215,6 +218,15 @@ function AISection({ invoice, form, setForm, onUpdated }: { invoice: Invoice; fo
           {INVOICE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
       </Field>
+      <label className="flex items-center gap-3 px-1 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={!!form.is_refund}
+          onChange={(e) => setForm({ ...form, is_refund: e.target.checked })}
+          className="w-4 h-4 accent-primary"
+        />
+        <span className="text-sm">Dit is een <strong>terugbetaling / creditnota</strong> (geld komt binnen)</span>
+      </label>
       <Field label="Beschrijving">
         <textarea
           className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm min-h-[70px]"

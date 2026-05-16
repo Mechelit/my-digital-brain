@@ -97,6 +97,7 @@ export type Database = {
           iban: string | null
           id: string
           invoice_date: string | null
+          is_refund: boolean
           notes: string | null
           paid_at: string | null
           paid_from_account: string | null
@@ -122,6 +123,7 @@ export type Database = {
           iban?: string | null
           id?: string
           invoice_date?: string | null
+          is_refund?: boolean
           notes?: string | null
           paid_at?: string | null
           paid_from_account?: string | null
@@ -147,6 +149,7 @@ export type Database = {
           iban?: string | null
           id?: string
           invoice_date?: string | null
+          is_refund?: boolean
           notes?: string | null
           paid_at?: string | null
           paid_from_account?: string | null

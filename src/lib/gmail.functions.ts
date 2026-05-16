@@ -5,11 +5,12 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const GMAIL_GATEWAY = "https://connector-gateway.lovable.dev/google_mail/gmail/v1";
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-const SYSTEM_PROMPT = `You are an expert at reading Belgian invoices, payment letters, and bills. Extract structured payment data from the PDF/image.
+const SYSTEM_PROMPT = `You are an expert at reading Belgian invoices, payment letters, bills, refunds and credit notes. Extract structured payment data from the PDF/image.
 
 Return ONLY a JSON object with these fields (use null when missing):
 - supplier: company/organisation name
-- amount: number (decimal), the amount due
+- amount: number (decimal), the amount (always POSITIVE, even for refunds — the is_refund flag indicates direction)
+- is_refund: boolean — true if this is a credit note ("creditnota"), refund, terugbetaling, reimbursement, or money flowing TO the user instead of FROM
 - currency: ISO code, usually "EUR"
 - iban: Belgian/EU IBAN, no spaces, uppercase
 - bic: BIC code if shown
@@ -24,6 +25,7 @@ Output JSON only, no markdown.`;
 const ExtractionSchema = z.object({
   supplier: z.string().nullable().optional(),
   amount: z.number().nullable().optional(),
+  is_refund: z.boolean().nullable().optional(),
   currency: z.string().nullable().optional(),
   iban: z.string().nullable().optional(),
   bic: z.string().nullable().optional(),
@@ -77,8 +79,8 @@ export const syncGmail = createServerFn({ method: "POST" })
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY ontbreekt");
 
-    // Zoek recente mails met PDF-bijlagen of van Doccle
-    const query = encodeURIComponent('newer_than:60d (has:attachment filename:pdf OR from:doccle.be OR from:doccle.com OR subject:factuur OR subject:rekening OR subject:invoice)');
+    // Zoek recente mails: factuur/rekening/invoice/credit/refund of van Doccle (met of zonder PDF)
+    const query = encodeURIComponent('newer_than:90d (from:doccle.be OR from:doccle.com OR from:doccle.eu OR doccle OR ((has:attachment filename:pdf) AND (subject:factuur OR subject:rekening OR subject:invoice OR subject:receipt OR subject:creditnota OR subject:"credit note" OR subject:refund OR subject:terugbetaling)))');
     const list = await gmailFetch(`/users/me/messages?maxResults=25&q=${query}`);
     const ids: string[] = (list.messages ?? []).map((m: any) => m.id);
 
@@ -94,51 +96,55 @@ export const syncGmail = createServerFn({ method: "POST" })
         if (existing) { skipped++; continue; }
 
         const msg = await gmailFetch(`/users/me/messages/${messageId}?format=full`);
-        const pdfs = findPdfParts(msg.payload);
-        if (pdfs.length === 0) { skipped++; continue; }
-
         const headers: any[] = msg.payload?.headers ?? [];
         const subject = headers.find((h: any) => h.name?.toLowerCase() === "subject")?.value ?? "";
         const from = headers.find((h: any) => h.name?.toLowerCase() === "from")?.value ?? "";
+        const isDoccle = /doccle/i.test(from) || /doccle/i.test(subject);
 
-        // Neem eerste PDF
-        const pdf = pdfs[0];
-        const att = await gmailFetch(`/users/me/messages/${messageId}/attachments/${pdf.attachmentId}`);
-        const bytes = decodeB64Url(att.data);
-        if (bytes.length > 8 * 1024 * 1024) { skipped++; continue; }
+        const pdfs = findPdfParts(msg.payload);
+        if (pdfs.length === 0 && !isDoccle) { skipped++; continue; }
 
-        // Upload naar storage
-        const scanPath = `${userId}/gmail/${messageId}-${pdf.filename.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-        await supabase.storage.from("invoice-scans").upload(scanPath, bytes, { contentType: "application/pdf", upsert: true });
-
-        // AI extractie via PDF data URL
-        const dataUrl = `data:application/pdf;base64,${bytes.toString("base64")}`;
-        const aiRes = await fetch(AI_GATEWAY, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            messages: [
-              { role: "system", content: SYSTEM_PROMPT },
-              { role: "user", content: [
-                { type: "text", text: `Email subject: ${subject}\nFrom: ${from}\n\nExtract payment data from this PDF.` },
-                { type: "image_url", image_url: { url: dataUrl } },
-              ]},
-            ],
-            response_format: { type: "json_object" },
-          }),
-        });
-
+        let scanPath: string | null = null;
         let parsed: z.infer<typeof ExtractionSchema> = {};
-        if (aiRes.ok) {
-          const j = await aiRes.json();
-          try { parsed = ExtractionSchema.parse(JSON.parse(j.choices?.[0]?.message?.content ?? "{}")); } catch {}
+
+        if (pdfs.length > 0) {
+          const pdf = pdfs[0];
+          const att = await gmailFetch(`/users/me/messages/${messageId}/attachments/${pdf.attachmentId}`);
+          const bytes = decodeB64Url(att.data);
+          if (bytes.length > 8 * 1024 * 1024) { skipped++; continue; }
+
+          scanPath = `${userId}/gmail/${messageId}-${pdf.filename.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+          await supabase.storage.from("invoice-scans").upload(scanPath, bytes, { contentType: "application/pdf", upsert: true });
+
+          const dataUrl = `data:application/pdf;base64,${bytes.toString("base64")}`;
+          const aiRes = await fetch(AI_GATEWAY, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [
+                { role: "system", content: SYSTEM_PROMPT },
+                { role: "user", content: [
+                  { type: "text", text: `Email subject: ${subject}\nFrom: ${from}\n\nExtract payment data from this PDF.` },
+                  { type: "image_url", image_url: { url: dataUrl } },
+                ]},
+              ],
+              response_format: { type: "json_object" },
+            }),
+          });
+          if (aiRes.ok) {
+            const j = await aiRes.json();
+            try { parsed = ExtractionSchema.parse(JSON.parse(j.choices?.[0]?.message?.content ?? "{}")); } catch {}
+          }
         }
+
+        const isRefund = !!parsed.is_refund || /credit\s*nota|creditnota|refund|terugbetal/i.test(subject);
 
         await supabase.from("invoices").insert({
           user_id: userId,
           source: "email",
           status: "pending",
+          is_refund: isRefund,
           external_id: `gmail:${messageId}`,
           supplier: parsed.supplier ?? from.replace(/<.*>/, "").trim() ?? null,
           amount: parsed.amount ?? null,
@@ -151,7 +157,13 @@ export const syncGmail = createServerFn({ method: "POST" })
           due_date: parsed.due_date ?? null,
           notes: parsed.notes ?? subject.slice(0, 100),
           scan_path: scanPath,
-          raw_extraction: { ...parsed, email_subject: subject, email_from: from } as any,
+          raw_extraction: {
+            ...parsed,
+            email_subject: subject,
+            email_from: from,
+            gmail_message_id: messageId,
+            doccle_notification: isDoccle && pdfs.length === 0 ? true : undefined,
+          } as any,
         });
         imported++;
       } catch (e: any) {
