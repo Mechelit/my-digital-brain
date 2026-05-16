@@ -48,7 +48,7 @@ export function InvoiceCard({ invoice }: { invoice: Invoice }) {
       </div>
       <div className="text-right">
         <p className="font-semibold tabular-nums">
-          {invoice.amount != null ? `€ ${Number(invoice.amount).toFixed(2)}` : "—"}
+          {formatMoney(invoice.amount as any, invoice.currency)}
         </p>
       </div>
     </Link>
