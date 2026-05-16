@@ -37,6 +37,8 @@ function ScanPage() {
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState<string>("");
   const [isDesktop, setIsDesktop] = useState(false);
+  const [waitingPaste, setWaitingPaste] = useState(false);
+  const pasteZoneRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setIsDesktop(window.matchMedia("(min-width: 768px) and (pointer: fine)").matches);
