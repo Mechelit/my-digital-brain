@@ -211,10 +211,17 @@ function AISection({ invoice, form, setForm, onUpdated }: { invoice: Invoice; fo
     onSuccess: (r) => {
       setForm({ ...form, category: r.category, ai_description: r.description, is_refund: r.is_refund ?? false });
       onUpdated();
-      toast.success(r.is_refund ? "Herkend als terugbetaling" : "AI-analyse klaar");
     },
     onError: (e: any) => toast.error(e.message ?? "AI-analyse mislukt"),
   });
+
+  // Auto-analyse zodra factuur geladen is en nog geen AI-beschrijving heeft
+  useEffect(() => {
+    if (!invoice.ai_description && !mut.isPending && !mut.isSuccess && !mut.isError) {
+      mut.mutate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoice.id]);
 
   return (
     <div className="glass-card rounded-2xl p-6 mb-4 space-y-4">
@@ -222,9 +229,10 @@ function AISection({ invoice, form, setForm, onUpdated }: { invoice: Invoice; fo
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-primary" />
           <h2 className="font-semibold">AI-analyse</h2>
+          {mut.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
         </div>
-        <Button size="sm" variant="secondary" onClick={() => mut.mutate()} disabled={mut.isPending}>
-          {mut.isPending ? "Analyseren..." : invoice.ai_description ? "Opnieuw" : "Analyseer"}
+        <Button size="sm" variant="ghost" onClick={() => mut.mutate()} disabled={mut.isPending}>
+          {mut.isPending ? "Bezig…" : "Opnieuw"}
         </Button>
       </div>
       <Field label="Categorie">
