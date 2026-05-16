@@ -5,11 +5,12 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const GMAIL_GATEWAY = "https://connector-gateway.lovable.dev/google_mail/gmail/v1";
 const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
-const SYSTEM_PROMPT = `You are an expert at reading Belgian invoices, payment letters, and bills. Extract structured payment data from the PDF/image.
+const SYSTEM_PROMPT = `You are an expert at reading Belgian invoices, payment letters, bills, refunds and credit notes. Extract structured payment data from the PDF/image.
 
 Return ONLY a JSON object with these fields (use null when missing):
 - supplier: company/organisation name
-- amount: number (decimal), the amount due
+- amount: number (decimal), the amount (always POSITIVE, even for refunds — the is_refund flag indicates direction)
+- is_refund: boolean — true if this is a credit note ("creditnota"), refund, terugbetaling, reimbursement, or money flowing TO the user instead of FROM
 - currency: ISO code, usually "EUR"
 - iban: Belgian/EU IBAN, no spaces, uppercase
 - bic: BIC code if shown
@@ -24,6 +25,7 @@ Output JSON only, no markdown.`;
 const ExtractionSchema = z.object({
   supplier: z.string().nullable().optional(),
   amount: z.number().nullable().optional(),
+  is_refund: z.boolean().nullable().optional(),
   currency: z.string().nullable().optional(),
   iban: z.string().nullable().optional(),
   bic: z.string().nullable().optional(),
