@@ -46,7 +46,12 @@ export const mobileGetSession = createServerFn({ method: "POST" })
       const { data: inv } = await supabaseAdmin.from("invoices").select("*").eq("id", s.invoice_id).single();
       invoice = inv;
     }
-    return { status: s.status, invoice };
+    const { data: accounts } = await supabaseAdmin
+      .from("accounts")
+      .select("id,name,iban,is_default")
+      .eq("user_id", s.user_id)
+      .order("is_default", { ascending: false });
+    return { status: s.status, invoice, accounts: accounts ?? [] };
   });
 
 export const mobileScanExtract = createServerFn({ method: "POST" })
