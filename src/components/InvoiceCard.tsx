@@ -1,7 +1,7 @@
 import type { Database } from "@/integrations/supabase/types";
 import { Link } from "@tanstack/react-router";
 import { Calendar, FileText } from "lucide-react";
-import { formatMoney } from "@/lib/format";
+import { formatWithEuroEstimate } from "@/lib/format";
 
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 
@@ -19,7 +19,8 @@ const statusLabel: Record<string, string> = {
 };
 
 export function InvoiceCard({ invoice }: { invoice: Invoice }) {
-  const overdue = invoice.due_date && new Date(invoice.due_date) < new Date() && invoice.status !== "paid";
+  const overdue =
+    invoice.due_date && new Date(invoice.due_date) < new Date() && invoice.status !== "paid";
   return (
     <Link
       to="/invoice/$id"
@@ -32,7 +33,9 @@ export function InvoiceCard({ invoice }: { invoice: Invoice }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <p className="font-medium truncate">{invoice.supplier ?? "Onbekende leverancier"}</p>
-          <span className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded ${statusStyles[invoice.status]}`}>
+          <span
+            className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded ${statusStyles[invoice.status]}`}
+          >
             {statusLabel[invoice.status]}
           </span>
         </div>
@@ -48,7 +51,7 @@ export function InvoiceCard({ invoice }: { invoice: Invoice }) {
       </div>
       <div className="text-right">
         <p className="font-semibold tabular-nums">
-          {formatMoney(invoice.amount as any, invoice.currency)}
+          {formatWithEuroEstimate(invoice.amount as any, invoice.currency)}
         </p>
       </div>
     </Link>

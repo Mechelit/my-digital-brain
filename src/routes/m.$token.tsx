@@ -5,7 +5,7 @@ import QRCode from "qrcode";
 import { mobileGetSession, mobileScanExtract, mobileMarkPaid } from "@/lib/mobile-scan.functions";
 import { Camera, Loader2, Brain, Check, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatMoney } from "@/lib/format";
+import { estimateEuro, formatMoney, formatWithEuroEstimate } from "@/lib/format";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/m/$token")({ component: MobileScanPage });
@@ -20,7 +20,7 @@ const fileToBase64 = (file: File) =>
 
 function buildEpcQr(inv: any): string | null {
   if (!inv?.iban || !inv?.amount) return null;
-  const amount = Number(inv.amount).toFixed(2);
+  const amount = (estimateEuro(inv.amount, inv.currency) ?? Number(inv.amount)).toFixed(2);
   const ref = (inv.structured_reference || "").replace(/[^0-9]/g, "");
   const lines = [
     "BCD",
@@ -55,14 +55,22 @@ function MobileScanPage() {
 
   useEffect(() => {
     getSession({ data: { token } })
-      .then((r) => { setValid(true); if (r.invoice) setInvoice(r.invoice); })
+      .then((r) => {
+        setValid(true);
+        if (r.invoice) setInvoice(r.invoice);
+      })
       .catch(() => setValid(false));
   }, [token]);
 
   useEffect(() => {
     const payload = buildEpcQr(invoice);
-    if (!payload) { setQr(""); return; }
-    QRCode.toDataURL(payload, { width: 280, margin: 1 }).then(setQr).catch(() => setQr(""));
+    if (!payload) {
+      setQr("");
+      return;
+    }
+    QRCode.toDataURL(payload, { width: 280, margin: 1 })
+      .then(setQr)
+      .catch(() => setQr(""));
   }, [invoice]);
 
   const handle = async (file: File) => {
@@ -71,7 +79,9 @@ function MobileScanPage() {
       setStage("Uploaden…");
       const base64 = await fileToBase64(file);
       setStage("AI leest de brief…");
-      const { invoice: inv } = await scan({ data: { token, imageBase64: base64, mimeType: file.type || "image/jpeg" } });
+      const { invoice: inv } = await scan({
+        data: { token, imageBase64: base64, mimeType: file.type || "image/jpeg" },
+      });
       setInvoice(inv);
       toast.success("Factuur ingelezen");
     } catch (err) {
@@ -98,7 +108,9 @@ function MobileScanPage() {
       <div className="min-h-screen flex items-center justify-center p-6 text-center">
         <div>
           <p className="text-lg font-medium">Sessie verlopen of niet geldig</p>
-          <p className="text-sm text-muted-foreground mt-2">Open opnieuw een scan-sessie op je laptop.</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Open opnieuw een scan-sessie op je laptop.
+          </p>
         </div>
       </div>
     );
@@ -121,14 +133,24 @@ function MobileScanPage() {
           <div className="glass-card rounded-2xl p-5">
             <p className="text-xs uppercase tracking-wider text-muted-foreground">Factuur</p>
             <h2 className="text-xl font-semibold mt-1">{invoice.supplier || "Onbekend"}</h2>
-            <p className="text-3xl font-semibold mt-2">{formatMoney(invoice.amount, invoice.currency)}</p>
-            {invoice.iban && <p className="text-xs font-mono text-muted-foreground mt-2">{invoice.iban}</p>}
-            {invoice.structured_reference && <p className="text-xs font-mono text-muted-foreground">{invoice.structured_reference}</p>}
+            <p className="text-3xl font-semibold mt-2">
+              {formatWithEuroEstimate(invoice.amount, invoice.currency)}
+            </p>
+            {invoice.iban && (
+              <p className="text-xs font-mono text-muted-foreground mt-2">{invoice.iban}</p>
+            )}
+            {invoice.structured_reference && (
+              <p className="text-xs font-mono text-muted-foreground">
+                {invoice.structured_reference}
+              </p>
+            )}
           </div>
 
           {qr && !paid && (
             <div className="glass-card rounded-2xl p-5 text-center">
-              <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">Betaal met je bank-app</p>
+              <p className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
+                Betaal met je bank-app
+              </p>
               <img src={qr} alt="EPC betaal-QR" className="rounded-xl bg-white p-3 mx-auto" />
               <p className="text-xs text-muted-foreground mt-3">
                 Open je banking-app (KBC, Belfius, BNP, ING, Argenta…) → scannen → bevestigen.
@@ -149,21 +171,37 @@ function MobileScanPage() {
             </Button>
           )}
 
-          <Button variant="ghost" className="w-full" onClick={() => { setInvoice(null); }}>
+          <Button
+            variant="ghost"
+            className="w-full"
+            onClick={() => {
+              setInvoice(null);
+            }}
+          >
             Nog een brief scannen
           </Button>
         </div>
       ) : (
         <>
-          <Button size="lg" className="glow-ring h-16 px-8 text-base" onClick={() => camRef.current?.click()}>
+          <Button
+            size="lg"
+            className="glow-ring h-16 px-8 text-base"
+            onClick={() => camRef.current?.click()}
+          >
             <Camera className="w-5 h-5 mr-2" /> Maak foto van brief
           </Button>
-          <p className="text-xs text-muted-foreground mt-4">De foto wordt geanalyseerd en verschijnt op je laptop.</p>
+          <p className="text-xs text-muted-foreground mt-4">
+            De foto wordt geanalyseerd en verschijnt op je laptop.
+          </p>
         </>
       )}
 
       <input
-        ref={camRef} type="file" accept="image/*" capture="environment" className="hidden"
+        ref={camRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
         onChange={(e) => e.target.files?.[0] && handle(e.target.files[0])}
       />
     </div>
