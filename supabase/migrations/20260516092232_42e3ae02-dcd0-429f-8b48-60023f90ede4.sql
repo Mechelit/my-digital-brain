@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.auto_pay_on_refund() FROM PUBLIC, anon, authenticated;
