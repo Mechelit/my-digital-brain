@@ -9,7 +9,13 @@ import { extractInvoice } from "@/lib/invoices.functions";
 import { toast } from "sonner";
 import { Camera, Upload, Loader2, Monitor, Smartphone, QrCode } from "lucide-react";
 
-export const Route = createFileRoute("/scan")({ component: () => <AppShell><ScanPage /></AppShell> });
+export const Route = createFileRoute("/scan")({
+  component: () => (
+    <AppShell>
+      <ScanPage />
+    </AppShell>
+  ),
+});
 
 const fileToBase64 = (file: File) =>
   new Promise<string>((resolve, reject) => {
@@ -93,7 +99,8 @@ function ScanPage() {
     <div className="max-w-3xl mx-auto px-5 md:px-8 py-8 md:py-12">
       <h1 className="text-3xl font-semibold tracking-tight mb-2">Scan een brief</h1>
       <p className="text-muted-foreground mb-8">
-        Maak een foto van de factuur of upload een PDF/afbeelding. AI haalt automatisch IBAN, bedrag, mededeling en vervaldatum eruit.
+        Maak een foto van de factuur of upload een PDF/afbeelding. AI haalt automatisch IBAN,
+        bedrag, mededeling en vervaldatum eruit.
       </p>
 
       {busy ? (
@@ -132,7 +139,9 @@ function ScanPage() {
             </div>
             <div>
               <h2 className="font-semibold">Scannen vanaf je gsm</h2>
-              <p className="text-sm text-muted-foreground">QR tonen — scan met je telefoon, betaal er meteen mee.</p>
+              <p className="text-sm text-muted-foreground">
+                QR tonen — scan met je telefoon, betaal er meteen mee.
+              </p>
             </div>
           </button>
         </div>

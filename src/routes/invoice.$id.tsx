@@ -16,7 +16,13 @@ import { estimateEuro, formatMoney, formatWithEuroEstimate } from "@/lib/format"
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 type Account = Database["public"]["Tables"]["accounts"]["Row"];
 
-export const Route = createFileRoute("/invoice/$id")({ component: () => <AppShell><InvoiceDetail /></AppShell> });
+export const Route = createFileRoute("/invoice/$id")({
+  component: () => (
+    <AppShell>
+      <InvoiceDetail />
+    </AppShell>
+  ),
+});
 
 function InvoiceDetail() {
   const { id } = useParams({ from: "/invoice/$id" });
@@ -36,7 +42,10 @@ function InvoiceDetail() {
   const { data: accounts = [] } = useQuery({
     queryKey: ["accounts"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("accounts").select("*").order("is_default", { ascending: false });
+      const { data, error } = await supabase
+        .from("accounts")
+        .select("*")
+        .order("is_default", { ascending: false });
       if (error) throw error;
       return data as Account[];
     },
@@ -48,9 +57,12 @@ function InvoiceDetail() {
 
   useEffect(() => {
     if (!invoice?.scan_path) return;
-    supabase.storage.from("invoice-scans").createSignedUrl(invoice.scan_path, 3600).then(({ data }) => {
-      if (data) setScanUrl(data.signedUrl);
-    });
+    supabase.storage
+      .from("invoice-scans")
+      .createSignedUrl(invoice.scan_path, 3600)
+      .then(({ data }) => {
+        if (data) setScanUrl(data.signedUrl);
+      });
   }, [invoice?.scan_path]);
 
   const save = useMutation({
@@ -66,7 +78,8 @@ function InvoiceDetail() {
 
   const del = async () => {
     if (!confirm("Factuur verwijderen?")) return;
-    if (invoice?.scan_path) await supabase.storage.from("invoice-scans").remove([invoice.scan_path]);
+    if (invoice?.scan_path)
+      await supabase.storage.from("invoice-scans").remove([invoice.scan_path]);
     await supabase.from("invoices").delete().eq("id", id);
     navigate({ to: "/" });
   };
@@ -87,82 +100,162 @@ function InvoiceDetail() {
 
   return (
     <div className="max-w-3xl mx-auto px-5 md:px-8 py-8 md:py-12">
-      <button onClick={() => navigate({ to: "/" })} className="flex items-center gap-2 text-sm text-muted-foreground mb-6 hover:text-foreground">
+      <button
+        onClick={() => navigate({ to: "/" })}
+        className="flex items-center gap-2 text-sm text-muted-foreground mb-6 hover:text-foreground"
+      >
         <ArrowLeft className="w-4 h-4" /> Terug
       </button>
 
       <div className="flex items-start justify-between mb-6">
         <div>
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">{form.is_refund ? "Terugbetaling / Creditnota" : "Factuur"}</p>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">
+            {form.is_refund ? "Terugbetaling / Creditnota" : "Factuur"}
+          </p>
           <h1 className="text-3xl font-semibold tracking-tight mt-1">
             {form.supplier || "Naam ontbreekt"}
             {form.amount != null ? (
-              <span className={`ml-3 text-xl ${form.is_refund ? "text-emerald-400" : "text-muted-foreground"}`}>
-                {form.is_refund ? "+" : ""}{formatWithEuroEstimate(form.amount as any, form.currency)}
+              <span
+                className={`ml-3 text-xl ${form.is_refund ? "text-emerald-400" : "text-muted-foreground"}`}
+              >
+                {form.is_refund ? "+" : ""}
+                {formatWithEuroEstimate(form.amount as any, form.currency)}
               </span>
             ) : null}
           </h1>
         </div>
-        <Button size="sm" variant="ghost" onClick={del}><Trash2 className="w-4 h-4" /></Button>
+        <Button size="sm" variant="ghost" onClick={del}>
+          <Trash2 className="w-4 h-4" />
+        </Button>
       </div>
 
-      {scanUrl && (() => {
-        const isPdf = (invoice.scan_path ?? "").toLowerCase().endsWith(".pdf");
-        return (
-          <div className="glass-card rounded-2xl p-3 mb-6 space-y-2">
-            <div className="flex items-center justify-between px-2">
-              <p className="text-xs uppercase tracking-wider text-muted-foreground">Originele scan</p>
-              <a href={scanUrl} target="_blank" rel="noreferrer" className="text-xs text-primary flex items-center gap-1 hover:underline">
-                Openen <ExternalLink className="w-3 h-3" />
-              </a>
+      {scanUrl &&
+        (() => {
+          const isPdf = (invoice.scan_path ?? "").toLowerCase().endsWith(".pdf");
+          return (
+            <div className="glass-card rounded-2xl p-3 mb-6 space-y-2">
+              <div className="flex items-center justify-between px-2">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Originele scan
+                </p>
+                <a
+                  href={scanUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-primary flex items-center gap-1 hover:underline"
+                >
+                  Openen <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+              {isPdf ? (
+                <object
+                  data={scanUrl}
+                  type="application/pdf"
+                  className="w-full h-[520px] rounded-xl bg-background"
+                >
+                  <div className="p-8 text-center text-sm text-muted-foreground">
+                    PDF kan niet inline getoond worden.{" "}
+                    <a
+                      href={scanUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-primary underline"
+                    >
+                      Open in nieuw tabblad
+                    </a>
+                  </div>
+                </object>
+              ) : (
+                <img
+                  src={scanUrl}
+                  alt="Factuur scan"
+                  className="w-full max-h-[520px] object-contain rounded-xl bg-background"
+                />
+              )}
             </div>
-            {isPdf ? (
-              <object data={scanUrl} type="application/pdf" className="w-full h-[520px] rounded-xl bg-background">
-                <div className="p-8 text-center text-sm text-muted-foreground">
-                  PDF kan niet inline getoond worden. <a href={scanUrl} target="_blank" rel="noreferrer" className="text-primary underline">Open in nieuw tabblad</a>
-                </div>
-              </object>
-            ) : (
-              <img src={scanUrl} alt="Factuur scan" className="w-full max-h-[520px] object-contain rounded-xl bg-background" />
-            )}
-          </div>
-        );
-      })()}
+          );
+        })()}
 
-      <AISection invoice={invoice} onUpdated={() => qc.invalidateQueries({ queryKey: ["invoice", id] })} form={form} setForm={setForm} />
+      <AISection
+        invoice={invoice}
+        onUpdated={() => qc.invalidateQueries({ queryKey: ["invoice", id] })}
+        form={form}
+        setForm={setForm}
+      />
 
       <div className="glass-card rounded-2xl p-6 space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <Field label="Leverancier">
-            <Input value={form.supplier ?? ""} onChange={(e) => setForm({ ...form, supplier: e.target.value })} />
+            <Input
+              value={form.supplier ?? ""}
+              onChange={(e) => setForm({ ...form, supplier: e.target.value })}
+            />
           </Field>
           <Field label={`Bedrag (${(form.currency || "EUR").toUpperCase()})`}>
             <div className="flex gap-2">
-              <Input type="number" step="0.01" value={form.amount ?? ""} onChange={(e) => setForm({ ...form, amount: e.target.value ? parseFloat(e.target.value) : null })} className="flex-1" />
-              <Input value={form.currency ?? "EUR"} onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase().slice(0,3) })} className="w-20 font-mono uppercase" />
+              <Input
+                type="number"
+                step="0.01"
+                value={form.amount ?? ""}
+                onChange={(e) =>
+                  setForm({ ...form, amount: e.target.value ? parseFloat(e.target.value) : null })
+                }
+                className="flex-1"
+              />
+              <Input
+                value={form.currency ?? "EUR"}
+                onChange={(e) =>
+                  setForm({ ...form, currency: e.target.value.toUpperCase().slice(0, 3) })
+                }
+                className="w-20 font-mono uppercase"
+              />
               {(form.currency || "EUR").toUpperCase() !== "EUR" && form.amount != null ? (
-                <span className="self-center whitespace-nowrap text-xs text-muted-foreground">≈ {formatMoney(estimateEuro(form.amount as any, form.currency), "EUR")}</span>
+                <span className="self-center whitespace-nowrap text-xs text-muted-foreground">
+                  ≈ {formatMoney(estimateEuro(form.amount as any, form.currency), "EUR")}
+                </span>
               ) : null}
             </div>
           </Field>
         </div>
         <Field label="IBAN">
-          <Input value={form.iban ?? ""} onChange={(e) => setForm({ ...form, iban: e.target.value.toUpperCase().replace(/\s/g, "") })} className="font-mono" />
+          <Input
+            value={form.iban ?? ""}
+            onChange={(e) =>
+              setForm({ ...form, iban: e.target.value.toUpperCase().replace(/\s/g, "") })
+            }
+            className="font-mono"
+          />
         </Field>
         <Field label="Gestructureerde mededeling">
-          <Input value={form.structured_reference ?? ""} onChange={(e) => setForm({ ...form, structured_reference: e.target.value })} className="font-mono" placeholder="+++000/0000/00000+++" />
+          <Input
+            value={form.structured_reference ?? ""}
+            onChange={(e) => setForm({ ...form, structured_reference: e.target.value })}
+            className="font-mono"
+            placeholder="+++000/0000/00000+++"
+          />
         </Field>
         {!form.structured_reference && (
           <Field label="Vrije mededeling">
-            <Input value={form.free_reference ?? ""} onChange={(e) => setForm({ ...form, free_reference: e.target.value })} />
+            <Input
+              value={form.free_reference ?? ""}
+              onChange={(e) => setForm({ ...form, free_reference: e.target.value })}
+            />
           </Field>
         )}
         <div className="grid grid-cols-2 gap-4">
           <Field label="Factuurdatum">
-            <Input type="date" value={form.invoice_date ?? ""} onChange={(e) => setForm({ ...form, invoice_date: e.target.value || null })} />
+            <Input
+              type="date"
+              value={form.invoice_date ?? ""}
+              onChange={(e) => setForm({ ...form, invoice_date: e.target.value || null })}
+            />
           </Field>
           <Field label="Vervaldatum">
-            <Input type="date" value={form.due_date ?? ""} onChange={(e) => setForm({ ...form, due_date: e.target.value || null })} />
+            <Input
+              type="date"
+              value={form.due_date ?? ""}
+              onChange={(e) => setForm({ ...form, due_date: e.target.value || null })}
+            />
           </Field>
         </div>
         {accounts.length > 0 && (
@@ -173,11 +266,19 @@ function InvoiceDetail() {
               onChange={(e) => setForm({ ...form, paid_from_account: e.target.value || null })}
             >
               <option value="">— Geen rekening —</option>
-              {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              {accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
             </select>
           </Field>
         )}
-        <Button variant="secondary" className="w-full" onClick={() => save.mutateAsync(form).then(() => toast.success("Opgeslagen"))}>
+        <Button
+          variant="secondary"
+          className="w-full"
+          onClick={() => save.mutateAsync(form).then(() => toast.success("Opgeslagen"))}
+        >
           Wijzigingen opslaan
         </Button>
       </div>
@@ -189,7 +290,11 @@ function InvoiceDetail() {
             ? "Voeg eerst een rekening toe om bij te houden waarvandaan je betaalt."
             : "Echte bankbetaling via Ponto/Tink (PSD2) komt in fase 2. Voor nu: bevestig dat je betaald hebt en het wordt afgevinkt in je financiën."}
         </p>
-        <Button className="w-full glow-ring" disabled={invoice.status === "paid"} onClick={confirmAndPay}>
+        <Button
+          className="w-full glow-ring"
+          disabled={invoice.status === "paid"}
+          onClick={confirmAndPay}
+        >
           <Check className="w-4 h-4 mr-2" />
           {invoice.status === "paid" ? "Al betaald" : "Markeer als betaald"}
         </Button>
@@ -207,12 +312,27 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function AISection({ invoice, form, setForm, onUpdated }: { invoice: Invoice; form: Partial<Invoice>; setForm: (f: Partial<Invoice>) => void; onUpdated: () => void }) {
+function AISection({
+  invoice,
+  form,
+  setForm,
+  onUpdated,
+}: {
+  invoice: Invoice;
+  form: Partial<Invoice>;
+  setForm: (f: Partial<Invoice>) => void;
+  onUpdated: () => void;
+}) {
   const runAI = useServerFn(categorizeInvoice);
   const mut = useMutation({
     mutationFn: () => runAI({ data: { id: invoice.id } }),
     onSuccess: (r) => {
-      setForm({ ...form, category: r.category, ai_description: r.description, is_refund: r.is_refund ?? false });
+      setForm({
+        ...form,
+        category: r.category,
+        ai_description: r.description,
+        is_refund: r.is_refund ?? false,
+      });
       onUpdated();
     },
     onError: (e: any) => toast.error(e.message ?? "AI-analyse mislukt"),
@@ -245,7 +365,11 @@ function AISection({ invoice, form, setForm, onUpdated }: { invoice: Invoice; fo
           onChange={(e) => setForm({ ...form, category: e.target.value || null })}
         >
           <option value="">— Geen categorie —</option>
-          {INVOICE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          {INVOICE_CATEGORIES.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
         </select>
       </Field>
       <label className="flex items-center gap-3 px-1 cursor-pointer">
@@ -255,7 +379,9 @@ function AISection({ invoice, form, setForm, onUpdated }: { invoice: Invoice; fo
           onChange={(e) => setForm({ ...form, is_refund: e.target.checked })}
           className="w-4 h-4 accent-primary"
         />
-        <span className="text-sm">Dit is een <strong>terugbetaling / creditnota</strong> (geld komt binnen)</span>
+        <span className="text-sm">
+          Dit is een <strong>terugbetaling / creditnota</strong> (geld komt binnen)
+        </span>
       </label>
       <Field label="Beschrijving">
         <textarea

@@ -19,7 +19,8 @@ const statusLabel: Record<string, string> = {
 };
 
 export function InvoiceCard({ invoice }: { invoice: Invoice }) {
-  const overdue = invoice.due_date && new Date(invoice.due_date) < new Date() && invoice.status !== "paid";
+  const overdue =
+    invoice.due_date && new Date(invoice.due_date) < new Date() && invoice.status !== "paid";
   return (
     <Link
       to="/invoice/$id"
@@ -32,7 +33,9 @@ export function InvoiceCard({ invoice }: { invoice: Invoice }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <p className="font-medium truncate">{invoice.supplier ?? "Onbekende leverancier"}</p>
-          <span className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded ${statusStyles[invoice.status]}`}>
+          <span
+            className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded ${statusStyles[invoice.status]}`}
+          >
             {statusLabel[invoice.status]}
           </span>
         </div>
