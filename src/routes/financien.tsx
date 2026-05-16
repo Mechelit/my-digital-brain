@@ -56,13 +56,27 @@ function FinancienPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("invoices")
-        .select("id,supplier,amount,category,paid_at")
+        .select("id,supplier,amount,category,paid_at,is_refund")
         .eq("status", "paid")
         .not("amount", "is", null);
       if (error) throw error;
       return data ?? [];
     },
   });
+
+  const byCategory = (() => {
+    const m = new Map<string, { total: number; count: number }>();
+    for (const inv of paidInvoices.data ?? []) {
+      const cat = (inv as any).category || "Niet gecategoriseerd";
+      const sign = (inv as any).is_refund ? -1 : 1;
+      const cur = m.get(cat) ?? { total: 0, count: 0 };
+      cur.total += sign * Number((inv as any).amount ?? 0);
+      cur.count += 1;
+      m.set(cat, cur);
+    }
+    return [...m.entries()].sort((a, b) => Math.abs(b[1].total) - Math.abs(a[1].total));
+  })();
+  const totalSpent = byCategory.reduce((s, [, v]) => s + v.total, 0);
 
   const byCategory = (() => {
     const m = new Map<string, { total: number; count: number }>();
