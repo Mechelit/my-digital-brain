@@ -229,6 +229,7 @@ export type Database = {
           id: string
           name: string
           notes: string | null
+          scope: Database["public"]["Enums"]["expense_scope"]
           updated_at: string
           user_id: string
         }
@@ -241,6 +242,7 @@ export type Database = {
           id?: string
           name: string
           notes?: string | null
+          scope?: Database["public"]["Enums"]["expense_scope"]
           updated_at?: string
           user_id: string
         }
@@ -253,6 +255,7 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+          scope?: Database["public"]["Enums"]["expense_scope"]
           updated_at?: string
           user_id?: string
         }
@@ -266,6 +269,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      expense_scope: "prive" | "zakelijk"
       invoice_source: "scan" | "upload" | "email" | "mobile_scan"
       invoice_status: "pending" | "confirmed" | "paid" | "archived"
     }
@@ -395,6 +399,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      expense_scope: ["prive", "zakelijk"],
       invoice_source: ["scan", "upload", "email", "mobile_scan"],
       invoice_status: ["pending", "confirmed", "paid", "archived"],
     },
