@@ -143,7 +143,7 @@ function InvoiceDetail() {
             </select>
           </Field>
         )}
-        <Button variant="secondary" className="w-full" onClick={() => save.mutate(form).then(() => toast.success("Opgeslagen"))}>
+        <Button variant="secondary" className="w-full" onClick={() => save.mutateAsync(form).then(() => toast.success("Opgeslagen"))}>
           Wijzigingen opslaan
         </Button>
       </div>

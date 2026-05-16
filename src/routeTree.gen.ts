@@ -9,12 +9,33 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ScanRouteImport } from './routes/scan'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as InboxRouteImport } from './routes/inbox'
+import { Route as AccountsRouteImport } from './routes/accounts'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MTokenRouteImport } from './routes/m.$token'
+import { Route as InvoiceIdRouteImport } from './routes/invoice.$id'
+import { Route as ScanDesktopTokenRouteImport } from './routes/scan.desktop.$token'
 
+const ScanRoute = ScanRouteImport.update({
+  id: '/scan',
+  path: '/scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InboxRoute = InboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountsRoute = AccountsRouteImport.update({
+  id: '/accounts',
+  path: '/accounts',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -22,40 +43,124 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MTokenRoute = MTokenRouteImport.update({
+  id: '/m/$token',
+  path: '/m/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvoiceIdRoute = InvoiceIdRouteImport.update({
+  id: '/invoice/$id',
+  path: '/invoice/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScanDesktopTokenRoute = ScanDesktopTokenRouteImport.update({
+  id: '/desktop/$token',
+  path: '/desktop/$token',
+  getParentRoute: () => ScanRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/accounts': typeof AccountsRoute
+  '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
+  '/scan': typeof ScanRouteWithChildren
+  '/invoice/$id': typeof InvoiceIdRoute
+  '/m/$token': typeof MTokenRoute
+  '/scan/desktop/$token': typeof ScanDesktopTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/accounts': typeof AccountsRoute
+  '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
+  '/scan': typeof ScanRouteWithChildren
+  '/invoice/$id': typeof InvoiceIdRoute
+  '/m/$token': typeof MTokenRoute
+  '/scan/desktop/$token': typeof ScanDesktopTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/accounts': typeof AccountsRoute
+  '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
+  '/scan': typeof ScanRouteWithChildren
+  '/invoice/$id': typeof InvoiceIdRoute
+  '/m/$token': typeof MTokenRoute
+  '/scan/desktop/$token': typeof ScanDesktopTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login'
+  fullPaths:
+    | '/'
+    | '/accounts'
+    | '/inbox'
+    | '/login'
+    | '/scan'
+    | '/invoice/$id'
+    | '/m/$token'
+    | '/scan/desktop/$token'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login'
-  id: '__root__' | '/' | '/login'
+  to:
+    | '/'
+    | '/accounts'
+    | '/inbox'
+    | '/login'
+    | '/scan'
+    | '/invoice/$id'
+    | '/m/$token'
+    | '/scan/desktop/$token'
+  id:
+    | '__root__'
+    | '/'
+    | '/accounts'
+    | '/inbox'
+    | '/login'
+    | '/scan'
+    | '/invoice/$id'
+    | '/m/$token'
+    | '/scan/desktop/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountsRoute: typeof AccountsRoute
+  InboxRoute: typeof InboxRoute
   LoginRoute: typeof LoginRoute
+  ScanRoute: typeof ScanRouteWithChildren
+  InvoiceIdRoute: typeof InvoiceIdRoute
+  MTokenRoute: typeof MTokenRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/scan': {
+      id: '/scan'
+      path: '/scan'
+      fullPath: '/scan'
+      preLoaderRoute: typeof ScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inbox': {
+      id: '/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof InboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/accounts': {
+      id: '/accounts'
+      path: '/accounts'
+      fullPath: '/accounts'
+      preLoaderRoute: typeof AccountsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -65,12 +170,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/m/$token': {
+      id: '/m/$token'
+      path: '/m/$token'
+      fullPath: '/m/$token'
+      preLoaderRoute: typeof MTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invoice/$id': {
+      id: '/invoice/$id'
+      path: '/invoice/$id'
+      fullPath: '/invoice/$id'
+      preLoaderRoute: typeof InvoiceIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scan/desktop/$token': {
+      id: '/scan/desktop/$token'
+      path: '/desktop/$token'
+      fullPath: '/scan/desktop/$token'
+      preLoaderRoute: typeof ScanDesktopTokenRouteImport
+      parentRoute: typeof ScanRoute
+    }
   }
 }
 
+interface ScanRouteChildren {
+  ScanDesktopTokenRoute: typeof ScanDesktopTokenRoute
+}
+
+const ScanRouteChildren: ScanRouteChildren = {
+  ScanDesktopTokenRoute: ScanDesktopTokenRoute,
+}
+
+const ScanRouteWithChildren = ScanRoute._addFileChildren(ScanRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountsRoute: AccountsRoute,
+  InboxRoute: InboxRoute,
   LoginRoute: LoginRoute,
+  ScanRoute: ScanRouteWithChildren,
+  InvoiceIdRoute: InvoiceIdRoute,
+  MTokenRoute: MTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
