@@ -70,18 +70,23 @@ function ScanPage() {
   };
 
   const startMobileSession = async () => {
-    if (!user) return;
-    const token = crypto.randomUUID().replace(/-/g, "");
-    const { error } = await supabase.from("mobile_scan_sessions").insert({
-      user_id: user.id,
-      token,
-      status: "open",
-    });
-    if (error) {
-      toast.error(error.message);
-      return;
+    if (!user || busy) return;
+    setBusy(true);
+    setStage("QR voor je gsm maken…");
+    try {
+      const token = crypto.randomUUID().replace(/-/g, "");
+      const { error } = await supabase.from("mobile_scan_sessions").insert({
+        user_id: user.id,
+        token,
+        status: "open",
+      });
+      if (error) throw error;
+      navigate({ to: "/scan/desktop/$token", params: { token } });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Mobiele scan starten mislukt");
+      setBusy(false);
+      setStage("");
     }
-    navigate({ to: "/scan/desktop/$token", params: { token } });
   };
 
   return (
