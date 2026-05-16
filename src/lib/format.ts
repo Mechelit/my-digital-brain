@@ -15,6 +15,23 @@ export const EUR_RATES: Record<string, number> = {
   SEK: 0.091,
   PLN: 0.235,
   CZK: 0.041,
+  HUF: 0.0026,
+  RON: 0.20,
+  TRY: 0.024,
+  INR: 0.011,
+  IDR: 0.000056,
+  VND: 0.000035,
+  KRW: 0.00063,
+  THB: 0.025,
+  MXN: 0.050,
+  BRL: 0.16,
+  ZAR: 0.051,
+  CLP: 0.00094,
+  COP: 0.00023,
+  ARS: 0.00079,
+  AED: 0.25,
+  SAR: 0.25,
+  BBD: 0.46,
 };
 
 export function formatMoney(amount: number | null | undefined, currency: string | null | undefined = "EUR") {
