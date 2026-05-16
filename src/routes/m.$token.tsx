@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import QRCode from "qrcode";
 import { mobileGetSession, mobileScanExtract, mobileMarkPaid } from "@/lib/mobile-scan.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { Camera, Loader2, Brain, Check, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { estimateEuro, formatMoney, formatWithEuroEstimate } from "@/lib/format";
@@ -52,12 +53,16 @@ function MobileScanPage() {
   const [valid, setValid] = useState<boolean | null>(null);
   const [qr, setQr] = useState<string>("");
   const [paid, setPaid] = useState(false);
+  const [accounts, setAccounts] = useState<Array<{ id: string; name: string; iban: string | null; is_default: boolean }>>([]);
+  const [accountId, setAccountId] = useState<string>("");
 
   useEffect(() => {
     getSession({ data: { token } })
       .then((r) => {
         setValid(true);
         if (r.invoice) setInvoice(r.invoice);
+        setAccounts(r.accounts ?? []);
+        setAccountId((r.accounts ?? []).find((a: any) => a.is_default)?.id ?? r.accounts?.[0]?.id ?? "");
       })
       .catch(() => setValid(false));
   }, [token]);
@@ -95,7 +100,7 @@ function MobileScanPage() {
   const onPay = async () => {
     if (!invoice) return;
     try {
-      await markPaid({ data: { token, invoiceId: invoice.id } });
+      await markPaid({ data: { token, invoiceId: invoice.id, accountId: accountId || null } });
       setPaid(true);
       toast.success("Gemarkeerd als betaald");
     } catch (e: any) {
@@ -166,9 +171,24 @@ function MobileScanPage() {
               <p className="font-medium">Afgevinkt als betaald</p>
             </div>
           ) : (
-            <Button className="w-full glow-ring h-12" onClick={onPay}>
-              <CreditCard className="w-4 h-4 mr-2" /> Markeer als betaald
-            </Button>
+            <div className="space-y-3">
+              {accounts.length > 0 && (
+                <select
+                  className="w-full bg-input border border-border rounded-md px-3 py-2 text-sm"
+                  value={accountId}
+                  onChange={(e) => setAccountId(e.target.value)}
+                >
+                  {accounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}{a.iban ? ` · ${a.iban}` : ""}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <Button className="w-full glow-ring h-12" onClick={onPay}>
+                <CreditCard className="w-4 h-4 mr-2" /> Markeer als betaald
+              </Button>
+            </div>
           )}
 
           <Button
@@ -202,7 +222,11 @@ function MobileScanPage() {
         accept="image/*"
         capture="environment"
         className="hidden"
-        onChange={(e) => e.target.files?.[0] && handle(e.target.files[0])}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          e.currentTarget.value = "";
+          if (file) void handle(file);
+        }}
       />
     </div>
   );
