@@ -1,14 +1,16 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowLeft, Check, Trash2, FileText } from "lucide-react";
+import { ArrowLeft, Check, Trash2, Sparkles, ExternalLink } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
+import { categorizeInvoice, INVOICE_CATEGORIES } from "@/lib/invoice-ai.functions";
 
 type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
 type Account = Database["public"]["Tables"]["accounts"]["Row"];
