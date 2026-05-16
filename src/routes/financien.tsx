@@ -94,21 +94,34 @@ function FinancienPage() {
       {/* Maandelijkse kosten */}
       <section>
         <h2 className="text-lg font-semibold mb-3 flex items-center gap-2"><Repeat className="w-4 h-4 text-primary" />Maandelijkse kosten</h2>
-        <div className="space-y-2">
-          {(recurring.data ?? []).map((r: any) => (
-            <div key={r.id} className="glass-card rounded-xl p-4 flex items-center gap-4">
-              <div className="flex-1 min-w-0">
-                <p className="font-medium">{r.name}</p>
-                <p className="text-xs text-muted-foreground">Elke {r.day_of_month}{ord(r.day_of_month)} van de maand</p>
+        {(["prive", "zakelijk"] as const).map((scope) => {
+          const items = (recurring.data ?? []).filter((r: any) => (r.scope ?? "prive") === scope);
+          const subtotal = items.reduce((s, r: any) => s + Number(r.amount), 0);
+          return (
+            <div key={scope} className="mb-5">
+              <div className="flex items-baseline justify-between mb-2 px-1">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">{scope === "prive" ? "Privé" : "Zakelijk"}</p>
+                <p className="text-xs tabular-nums text-muted-foreground">{fmt(subtotal)}/maand</p>
               </div>
-              <p className="tabular-nums font-semibold">{fmt(Number(r.amount))}</p>
-              <Button size="icon" variant="ghost" onClick={async () => {
-                await supabase.from("recurring_expenses").delete().eq("id", r.id);
-                qc.invalidateQueries({ queryKey: ["recurring"] });
-              }}><Trash2 className="w-4 h-4" /></Button>
+              <div className="space-y-2">
+                {items.length === 0 && <p className="text-xs text-muted-foreground px-1 italic">Geen kosten</p>}
+                {items.map((r: any) => (
+                  <div key={r.id} className="glass-card rounded-xl p-4 flex items-center gap-4">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium">{r.name}</p>
+                      <p className="text-xs text-muted-foreground">Elke {r.day_of_month}{ord(r.day_of_month)} van de maand</p>
+                    </div>
+                    <p className="tabular-nums font-semibold">{fmt(Number(r.amount))}</p>
+                    <Button size="icon" variant="ghost" onClick={async () => {
+                      await supabase.from("recurring_expenses").delete().eq("id", r.id);
+                      qc.invalidateQueries({ queryKey: ["recurring"] });
+                    }}><Trash2 className="w-4 h-4" /></Button>
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
+          );
+        })}
         <AddRecurring onAdded={() => qc.invalidateQueries({ queryKey: ["recurring"] })} userId={user?.id} />
       </section>
 
@@ -186,16 +199,17 @@ function AddRecurring({ onAdded, userId }: { onAdded: () => void; userId?: strin
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [day, setDay] = useState("1");
+  const [scope, setScope] = useState<"prive" | "zakelijk">("prive");
   const add = useMutation({
     mutationFn: async () => {
       if (!userId) return;
       const { error } = await supabase.from("recurring_expenses").insert({
-        user_id: userId, name, amount: parseFloat(amount.replace(",", ".")), day_of_month: parseInt(day),
-      });
+        user_id: userId, name, amount: parseFloat(amount.replace(",", ".")), day_of_month: parseInt(day), scope,
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
-      setName(""); setAmount(""); setDay("1"); setOpen(false);
+      setName(""); setAmount(""); setDay("1"); setScope("prive"); setOpen(false);
       toast.success("Maandelijkse kost toegevoegd");
       onAdded();
     },
@@ -203,6 +217,13 @@ function AddRecurring({ onAdded, userId }: { onAdded: () => void; userId?: strin
   if (!open) return <Button variant="ghost" size="sm" className="mt-3" onClick={() => setOpen(true)}><Plus className="w-4 h-4 mr-1" />Maandelijkse kost</Button>;
   return (
     <form onSubmit={(e) => { e.preventDefault(); add.mutate(); }} className="glass-card rounded-xl p-4 mt-3 space-y-3">
+      <div className="flex gap-2">
+        {(["prive", "zakelijk"] as const).map((s) => (
+          <Button key={s} type="button" size="sm" variant={scope === s ? "default" : "secondary"} onClick={() => setScope(s)}>
+            {s === "prive" ? "Privé" : "Zakelijk"}
+          </Button>
+        ))}
+      </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="col-span-2"><Label>Naam</Label><Input value={name} onChange={(e) => setName(e.target.value)} required /></div>
         <div><Label>Bedrag (€)</Label><Input value={amount} onChange={(e) => setAmount(e.target.value)} required /></div>
