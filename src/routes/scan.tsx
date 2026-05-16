@@ -42,6 +42,20 @@ function ScanPage() {
     setIsDesktop(window.matchMedia("(min-width: 768px) and (pointer: fine)").matches);
   }, []);
 
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const item = Array.from(e.clipboardData?.items ?? []).find((i) => i.type.startsWith("image/"));
+      const file = item?.getAsFile();
+      if (file) {
+        toast.success("Screenshot geplakt");
+        void handleFile(file);
+      }
+    };
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   const handleFile = async (file: File) => {
     if (!user) return;
     if (file.size > 15 * 1024 * 1024) {
@@ -132,8 +146,8 @@ function ScanPage() {
             className="glass-card rounded-2xl p-8 text-left hover:border-primary/40 transition-colors group"
           >
             <Upload className="w-8 h-8 text-primary mb-4" />
-            <h2 className="font-semibold mb-1">Bestand uploaden</h2>
-            <p className="text-sm text-muted-foreground">PDF of foto uit Doccle, mail, etc.</p>
+            <h2 className="font-semibold mb-1">Bestand of screenshot uploaden</h2>
+            <p className="text-sm text-muted-foreground">PDF, screenshot of foto uit Doccle, mail, etc.</p>
           </button>
 
           <button
