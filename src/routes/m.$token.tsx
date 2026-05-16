@@ -59,7 +59,10 @@ function MobileScanPage() {
     getSession({ data: { token } })
       .then((r) => {
         setValid(true);
-        if (r.invoice) setInvoice(r.invoice);
+        if (r.invoice) {
+          setInvoice(r.invoice);
+          setPaid(r.invoice.status === "paid");
+        }
         setAccounts(r.accounts ?? []);
         setAccountId((r.accounts ?? []).find((a: any) => a.is_default)?.id ?? r.accounts?.[0]?.id ?? "");
       })
@@ -87,6 +90,7 @@ function MobileScanPage() {
         data: { token, imageBase64: base64, mimeType: file.type || "image/jpeg" },
       });
       setInvoice(inv);
+      setPaid(inv.status === "paid");
       toast.success("Factuur ingelezen");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Mislukt");
