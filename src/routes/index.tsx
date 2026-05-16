@@ -116,14 +116,47 @@ function Dashboard() {
         </div>
       </section>
 
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 gap-2">
         <h2 className="text-lg font-semibold">Te bevestigen & te betalen</h2>
-        <Link to="/scan">
-          <Button size="sm" variant="secondary">
-            <Camera className="w-4 h-4 mr-2" />
-            Scan
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          {selectMode ? (
+            <>
+              <span className="text-sm text-muted-foreground">{selected.size} gekozen</span>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={deleteSelected}
+                disabled={selected.size === 0}
+              >
+                <Trash2 className="w-4 h-4 mr-1" /> Verwijder
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setSelectMode(false);
+                  setSelected(new Set());
+                }}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </>
+          ) : (
+            <>
+              {invoices.length > 0 && (
+                <Button size="sm" variant="ghost" onClick={() => setSelectMode(true)}>
+                  Selecteer
+                </Button>
+              )}
+              <Link to="/scan">
+                <Button size="sm" variant="secondary">
+                  <Camera className="w-4 h-4 mr-2" />
+                  Scan
+                </Button>
+              </Link>
+            </>
+          )}
+        </div>
       </div>
 
       {pending.length === 0 ? (
@@ -137,7 +170,13 @@ function Dashboard() {
       ) : (
         <div className="space-y-2">
           {pending.map((inv) => (
-            <InvoiceCard key={inv.id} invoice={inv} />
+            <InvoiceCard
+              key={inv.id}
+              invoice={inv}
+              selectable={selectMode}
+              selected={selected.has(inv.id)}
+              onToggleSelect={toggleSelect}
+            />
           ))}
         </div>
       )}
@@ -147,7 +186,13 @@ function Dashboard() {
           <h2 className="text-lg font-semibold mt-10 mb-4">Recent betaald</h2>
           <div className="space-y-2">
             {paid.slice(0, 5).map((inv) => (
-              <InvoiceCard key={inv.id} invoice={inv} />
+              <InvoiceCard
+                key={inv.id}
+                invoice={inv}
+                selectable={selectMode}
+                selected={selected.has(inv.id)}
+                onToggleSelect={toggleSelect}
+              />
             ))}
           </div>
         </>
