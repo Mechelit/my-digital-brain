@@ -480,6 +480,15 @@ function AISection({
           placeholder="Korte uitleg waar de betaling voor is..."
         />
       </Field>
+      <Button
+        variant={accepted ? "secondary" : "default"}
+        className="w-full"
+        onClick={() => void onAccept()}
+        disabled={mut.isPending}
+      >
+        <Check className="w-4 h-4 mr-2" />
+        {accepted ? "AI-analyse bevestigd" : "Accepteer AI-analyse"}
+      </Button>
     </div>
   );
 }
