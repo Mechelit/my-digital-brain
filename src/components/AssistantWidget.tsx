@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const N8N_WEBHOOK_URL = "https://mila-ai-brain.app.n8n.cloud/webhook-test/my-webhook";
+const N8N_WEBHOOK_URL = "https://mila-ai-brain.app.n8n.cloud/webhook/my-webhook";
 
 type Msg = {
   id: string;
@@ -114,8 +114,11 @@ export function AssistantWidget() {
       if (!res.ok) throw new Error(typeof data === "string" ? data : `HTTP ${res.status}`);
       handleResponse(data);
     } catch (e: any) {
-      toast.error(e?.message || "Webhook fout");
-      setMessages((m) => [...m, { id: uid(), role: "assistant", text: `⚠️ ${e?.message || "Webhook fout"}`, ts: Date.now() }]);
+      const message = e?.message === "Failed to fetch"
+        ? "Kan n8n niet bereiken. Controleer of je workflow live staat en of de Webhook node een response terugstuurt."
+        : e?.message || "Webhook fout";
+      toast.error(message);
+      setMessages((m) => [...m, { id: uid(), role: "assistant", text: `⚠️ ${message}`, ts: Date.now() }]);
     } finally {
       setSending(false);
     }
