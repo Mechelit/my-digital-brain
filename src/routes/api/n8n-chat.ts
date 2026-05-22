@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-const N8N_WEBHOOK_URL = "https://mila-ai-brain.app.n8n.cloud/webhook/my-webhook";
+const N8N_WEBHOOK_URL = "https://mila-ai-brain.app.n8n.cloud/webhook/sovereign-mind";
 
 const jsonHeaders = { "Content-Type": "application/json" } as const;
 
