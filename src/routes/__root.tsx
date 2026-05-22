@@ -72,7 +72,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Brain — alles wat je hoofd vergeet" },
+      { title: "Brain" },
       { name: "description", content: "Je persoonlijke brain: scan facturen, betaal in één klik, en hou je financiën rustig op één plek." },
       { name: "author", content: "Brain" },
       { property: "og:title", content: "Brain" },
@@ -80,6 +80,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Brain" },
+      { name: "twitter:description", content: "Je persoonlijke brain: scan facturen, betaal in één klik, en hou je financiën rustig op één plek." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b24461e4-6cf9-4328-be04-b707343c46b6/id-preview-b1204024--0ff1b87d-9f17-4eeb-8801-ac0d7937a671.lovable.app-1779434576633.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b24461e4-6cf9-4328-be04-b707343c46b6/id-preview-b1204024--0ff1b87d-9f17-4eeb-8801-ac0d7937a671.lovable.app-1779434576633.png" },
     ],
     links: [
       {
