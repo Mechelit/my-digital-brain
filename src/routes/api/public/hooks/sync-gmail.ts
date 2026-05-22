@@ -73,9 +73,13 @@ export const Route = createFileRoute("/api/public/hooks/sync-gmail")({
         let imported = 0;
         for (const messageId of ids) {
           try {
+            const extId = `gmail:${messageId}`;
             const { data: existing } = await admin
-              .from("invoices").select("id").eq("user_id", userId).eq("external_id", `gmail:${messageId}`).maybeSingle();
+              .from("invoices").select("id").eq("user_id", userId).eq("external_id", extId).maybeSingle();
             if (existing) continue;
+            const { data: ignored } = await admin
+              .from("ignored_emails").select("external_id").eq("user_id", userId).eq("external_id", extId).maybeSingle();
+            if (ignored) continue;
 
             const msg = await gmailFetch(`/users/me/messages/${messageId}?format=full`);
             const pdfs = findPdfParts(msg.payload);
