@@ -7,6 +7,7 @@ import { useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { syncGmail } from "@/lib/gmail.functions";
+import { AssistantWidget } from "@/components/AssistantWidget";
 
 const SYNC_THROTTLE_MS = 2 * 60 * 1000; // max 1x per 2 minuten
 
@@ -110,6 +111,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </div>
       </nav>
+      <AssistantWidget />
     </div>
   );
 }
