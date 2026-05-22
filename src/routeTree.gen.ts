@@ -18,6 +18,7 @@ import { Route as AccountsRouteImport } from './routes/accounts'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MTokenRouteImport } from './routes/m.$token'
 import { Route as InvoiceIdRouteImport } from './routes/invoice.$id'
+import { Route as ApiN8nChatRouteImport } from './routes/api/n8n-chat'
 import { Route as ScanDesktopTokenRouteImport } from './routes/scan.desktop.$token'
 import { Route as ApiPublicHooksSyncGmailRouteImport } from './routes/api/public/hooks/sync-gmail'
 
@@ -66,6 +67,11 @@ const InvoiceIdRoute = InvoiceIdRouteImport.update({
   path: '/invoice/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiN8nChatRoute = ApiN8nChatRouteImport.update({
+  id: '/api/n8n-chat',
+  path: '/api/n8n-chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ScanDesktopTokenRoute = ScanDesktopTokenRouteImport.update({
   id: '/desktop/$token',
   path: '/desktop/$token',
@@ -85,6 +91,7 @@ export interface FileRoutesByFullPath {
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/scan': typeof ScanRouteWithChildren
+  '/api/n8n-chat': typeof ApiN8nChatRoute
   '/invoice/$id': typeof InvoiceIdRoute
   '/m/$token': typeof MTokenRoute
   '/scan/desktop/$token': typeof ScanDesktopTokenRoute
@@ -98,6 +105,7 @@ export interface FileRoutesByTo {
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/scan': typeof ScanRouteWithChildren
+  '/api/n8n-chat': typeof ApiN8nChatRoute
   '/invoice/$id': typeof InvoiceIdRoute
   '/m/$token': typeof MTokenRoute
   '/scan/desktop/$token': typeof ScanDesktopTokenRoute
@@ -112,6 +120,7 @@ export interface FileRoutesById {
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/scan': typeof ScanRouteWithChildren
+  '/api/n8n-chat': typeof ApiN8nChatRoute
   '/invoice/$id': typeof InvoiceIdRoute
   '/m/$token': typeof MTokenRoute
   '/scan/desktop/$token': typeof ScanDesktopTokenRoute
@@ -127,6 +136,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/login'
     | '/scan'
+    | '/api/n8n-chat'
     | '/invoice/$id'
     | '/m/$token'
     | '/scan/desktop/$token'
@@ -140,6 +150,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/login'
     | '/scan'
+    | '/api/n8n-chat'
     | '/invoice/$id'
     | '/m/$token'
     | '/scan/desktop/$token'
@@ -153,6 +164,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/login'
     | '/scan'
+    | '/api/n8n-chat'
     | '/invoice/$id'
     | '/m/$token'
     | '/scan/desktop/$token'
@@ -167,6 +179,7 @@ export interface RootRouteChildren {
   InboxRoute: typeof InboxRoute
   LoginRoute: typeof LoginRoute
   ScanRoute: typeof ScanRouteWithChildren
+  ApiN8nChatRoute: typeof ApiN8nChatRoute
   InvoiceIdRoute: typeof InvoiceIdRoute
   MTokenRoute: typeof MTokenRoute
   ApiPublicHooksSyncGmailRoute: typeof ApiPublicHooksSyncGmailRoute
@@ -237,6 +250,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InvoiceIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/n8n-chat': {
+      id: '/api/n8n-chat'
+      path: '/api/n8n-chat'
+      fullPath: '/api/n8n-chat'
+      preLoaderRoute: typeof ApiN8nChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/scan/desktop/$token': {
       id: '/scan/desktop/$token'
       path: '/desktop/$token'
@@ -272,6 +292,7 @@ const rootRouteChildren: RootRouteChildren = {
   InboxRoute: InboxRoute,
   LoginRoute: LoginRoute,
   ScanRoute: ScanRouteWithChildren,
+  ApiN8nChatRoute: ApiN8nChatRoute,
   InvoiceIdRoute: InvoiceIdRoute,
   MTokenRoute: MTokenRoute,
   ApiPublicHooksSyncGmailRoute: ApiPublicHooksSyncGmailRoute,
