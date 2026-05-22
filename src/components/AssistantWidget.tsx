@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-const N8N_WEBHOOK_URL = "https://mila-ai-brain.app.n8n.cloud/webhook/my-webhook";
+const N8N_WEBHOOK_URL = "/api/n8n-chat";
 
 type Msg = {
   id: string;
