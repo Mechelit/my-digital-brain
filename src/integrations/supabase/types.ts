@@ -306,6 +306,57 @@ export type Database = {
           },
         ]
       }
+      outlook_emails: {
+        Row: {
+          body_preview: string | null
+          created_at: string
+          draft_reply: string | null
+          draft_status: Database["public"]["Enums"]["email_draft_status"]
+          external_id: string | null
+          id: string
+          is_read: boolean
+          is_replied: boolean
+          received_at: string | null
+          sender_email: string | null
+          sender_name: string | null
+          subject: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body_preview?: string | null
+          created_at?: string
+          draft_reply?: string | null
+          draft_status?: Database["public"]["Enums"]["email_draft_status"]
+          external_id?: string | null
+          id?: string
+          is_read?: boolean
+          is_replied?: boolean
+          received_at?: string | null
+          sender_email?: string | null
+          sender_name?: string | null
+          subject?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body_preview?: string | null
+          created_at?: string
+          draft_reply?: string | null
+          draft_status?: Database["public"]["Enums"]["email_draft_status"]
+          external_id?: string | null
+          id?: string
+          is_read?: boolean
+          is_replied?: boolean
+          received_at?: string | null
+          sender_email?: string | null
+          sender_name?: string | null
+          subject?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -375,6 +426,45 @@ export type Database = {
         }
         Relationships: []
       }
+      todos: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          priority: Database["public"]["Enums"]["todo_priority"]
+          source: Database["public"]["Enums"]["todo_source"]
+          status: Database["public"]["Enums"]["todo_status"]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["todo_priority"]
+          source?: Database["public"]["Enums"]["todo_source"]
+          status?: Database["public"]["Enums"]["todo_status"]
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["todo_priority"]
+          source?: Database["public"]["Enums"]["todo_source"]
+          status?: Database["public"]["Enums"]["todo_status"]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -390,10 +480,19 @@ export type Database = {
         | "lening"
         | "werk"
         | "ander"
+      email_draft_status:
+        | "none"
+        | "pending_review"
+        | "approved"
+        | "sent"
+        | "rejected"
       expense_frequency: "monthly" | "quarterly" | "biannual" | "yearly"
       expense_scope: "prive" | "zakelijk"
       invoice_source: "scan" | "upload" | "email" | "mobile_scan"
       invoice_status: "pending" | "confirmed" | "paid" | "archived"
+      todo_priority: "low" | "normal" | "high" | "urgent"
+      todo_source: "manual" | "mila" | "email"
+      todo_status: "open" | "in_progress" | "done"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -529,10 +628,20 @@ export const Constants = {
         "werk",
         "ander",
       ],
+      email_draft_status: [
+        "none",
+        "pending_review",
+        "approved",
+        "sent",
+        "rejected",
+      ],
       expense_frequency: ["monthly", "quarterly", "biannual", "yearly"],
       expense_scope: ["prive", "zakelijk"],
       invoice_source: ["scan", "upload", "email", "mobile_scan"],
       invoice_status: ["pending", "confirmed", "paid", "archived"],
+      todo_priority: ["low", "normal", "high", "urgent"],
+      todo_source: ["manual", "mila", "email"],
+      todo_status: ["open", "in_progress", "done"],
     },
   },
 } as const
