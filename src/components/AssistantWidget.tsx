@@ -96,7 +96,7 @@ export function AssistantWidget() {
     setSending(true);
 
     try {
-      const res = await fetch(N8N_WEBHOOK_URL, {
+      const res = await fetch("/api/n8n-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
