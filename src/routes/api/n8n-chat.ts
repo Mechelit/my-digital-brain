@@ -27,7 +27,19 @@ export const Route = createFileRoute("/api/n8n-chat")({
       POST: async ({ request }) => {
         try {
           const incoming = (await request.json()) as Record<string, unknown>;
-          const body = { ...incoming, source: "brain-dashboard", origin: request.headers.get("origin") || "lovable-preview" };
+          const message = String(incoming.message ?? incoming.chatInput ?? incoming.text ?? incoming.input ?? "");
+          const userId = String(incoming.user_id ?? incoming.userId ?? incoming.sessionId ?? "mila-sovereign-user");
+          const body = {
+            ...incoming,
+            message,
+            chatInput: message,
+            input: message,
+            user_id: userId,
+            userId,
+            sessionId: userId,
+            source: "brain-dashboard",
+            origin: request.headers.get("origin") || "lovable-preview",
+          };
 
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 60000);
