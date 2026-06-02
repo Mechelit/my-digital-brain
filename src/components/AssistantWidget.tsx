@@ -96,14 +96,21 @@ export function AssistantWidget() {
     setSending(true);
 
     try {
+      const now = Date.now();
+      const message = userMsg.text || "";
+      const userId = "mila-sovereign-user";
       const res = await fetch("/api/n8n-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: userMsg.text || "",
-          user_id: "mila-sovereign-user",
+          message,
+          chatInput: message,
+          input: message,
+          user_id: userId,
+          userId,
+          sessionId: userId,
           source: "brain-dashboard",
-          ts: Date.now(),
+          ts: now,
         }),
       });
 
