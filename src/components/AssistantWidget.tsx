@@ -76,9 +76,6 @@ export function AssistantWidget() {
     }
   }, [speak]);
 
-  // Keywords that trigger the full n8n agent (tools, memory, database)
-  const AGENT_KEYWORDS = ["todo", "to-do", "taak", "lijst", "herinnering", "email", "inbox", "mail", "factuur", "invoice", "weet je", "ken je", "herinner", "wat weet", "wie ben ik", "over mij", "mijn naam", "onthoud", "manus", "deploy", "bouw", "maak aan", "aanmaken", "remember", "know about", "about me"];
-
   const send = useCallback(async (opts?: { audioBlob?: Blob }) => {
     const hasText = text.trim().length > 0;
     const hasFiles = files.length > 0;
@@ -98,82 +95,39 @@ export function AssistantWidget() {
     setFiles([]);
     setSending(true);
 
-    const msgText = userMsg.text || "";
-    const msgLower = msgText.toLowerCase();
-    const needsAgent = AGENT_KEYWORDS.some((k) => msgLower.includes(k)) || msgText.length > 200 || hasFiles || hasAudio;
-
     try {
-      const fd = new FormData();
-      if (hasText) fd.append("message", userMsg.text!);
-      if (hasText) fd.append("text", userMsg.text!);
-      files.forEach((f, i) => fd.append(`file_${i}`, f, f.name));
-      if (opts?.audioBlob) fd.append("audio", opts.audioBlob, `voice-${Date.now()}.webm`);
-      fd.append("ts", String(Date.now()));
-      fd.append("source", "brain-dashboard");
-      fd.append("user_id", "mila-sovereign-user");
+      const res = await fetch(N8N_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: userMsg.text || "",
+          user_id: "mila-sovereign-user",
+          source: "brain-dashboard",
+          ts: Date.now(),
+        }),
+      });
 
-      if (!needsAgent) {
-        // ── FAST STREAMING PATH ──────────────────────────────────────────
-        const streamingMsgId = uid();
-        setMessages((m) => [...m, { id: streamingMsgId, role: "assistant", text: "", ts: Date.now() }]);
+      const ct = res.headers.get("content-type") || "";
+      let data: any = null;
+      if (ct.includes("application/json")) data = await res.json();
+      else {
+        const txt = await res.text();
+        try { data = JSON.parse(txt); } catch { data = txt; }
+      }
+      if (!res.ok) throw new Error(typeof data === "string" ? data : `HTTP ${res.status}`);
 
-        const res = await fetch(N8N_WEBHOOK_URL, {
-          method: "POST",
-          headers: { Accept: "text/event-stream" },
-          body: fd,
-        });
+      const payload = Array.isArray(data) ? data[0] : data;
+      const reply =
+        payload?.reply ??
+        payload?.text ??
+        payload?.output ??
+        (typeof payload === "string" ? payload : "");
 
-        const ct = res.headers.get("content-type") || "";
-
-        if (ct.includes("text/event-stream") && res.body) {
-          // True streaming — update message token by token
-          const reader = res.body.getReader();
-          const decoder = new TextDecoder();
-          let fullText = "";
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split("\n");
-            for (const line of lines) {
-              if (line.startsWith("data: ")) {
-                const raw = line.slice(6).trim();
-                if (raw === "[DONE]") break;
-                try {
-                  const parsed = JSON.parse(raw);
-                  const token = parsed?.choices?.[0]?.delta?.content || "";
-                  if (token) {
-                    fullText += token;
-                    setMessages((m) =>
-                      m.map((msg) => msg.id === streamingMsgId ? { ...msg, text: fullText } : msg)
-                    );
-                  }
-                } catch {}
-              }
-            }
-          }
-          if (fullText) speak(fullText);
-        } else {
-          // Non-streaming fallback
-          const data = ct.includes("application/json") ? await res.json() : await res.text();
-          if (!res.ok) throw new Error(typeof data === "string" ? data : `HTTP ${res.status}`);
-          const reply = (data as any)?.reply || (typeof data === "string" ? data : "Geen antwoord.");
-          setMessages((m) => m.map((msg) => msg.id === streamingMsgId ? { ...msg, text: reply } : msg));
-          if (reply) speak(String(reply));
-        }
+      if (reply) {
+        setMessages((m) => [...m, { id: uid(), role: "assistant", text: String(reply), ts: Date.now() }]);
+        speak(String(reply));
       } else {
-        // ── AGENT PATH via n8n ───────────────────────────────────────────
-        const res = await fetch(N8N_WEBHOOK_URL, { method: "POST", body: fd });
-        const ct = res.headers.get("content-type") || "";
-        let data: any = null;
-        if (ct.includes("application/json")) data = await res.json();
-        else {
-          const txt = await res.text();
-          try { data = JSON.parse(txt); } catch { data = txt; }
-        }
-        if (!res.ok) throw new Error(typeof data === "string" ? data : `HTTP ${res.status}`);
-        handleResponse(data);
+        setMessages((m) => [...m, { id: uid(), role: "assistant", text: "Verzonden ✓", ts: Date.now() }]);
       }
     } catch (e: any) {
       const message = e?.message === "Failed to fetch"
@@ -184,7 +138,7 @@ export function AssistantWidget() {
     } finally {
       setSending(false);
     }
-  }, [text, files, handleResponse, speak]);
+  }, [text, files, speak]);
 
   // === Audio recording + visualizer ===
   const stopVisualizer = () => {
