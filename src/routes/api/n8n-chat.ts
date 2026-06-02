@@ -26,30 +26,33 @@ export const Route = createFileRoute("/api/n8n-chat")({
     handlers: {
       POST: async ({ request }) => {
         try {
-          const incoming = await request.formData();
-          const body = new FormData();
-          incoming.forEach((value, key) => body.append(key, value));
-          body.set("source", "brain-dashboard");
-          body.set("origin", request.headers.get("origin") || "lovable-preview");
+          const incoming = (await request.json()) as Record<string, unknown>;
+          const body = { ...incoming, source: "brain-dashboard", origin: request.headers.get("origin") || "lovable-preview" };
+
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 60000);
+
           const response = await fetch(N8N_WEBHOOK_URL, {
             method: "POST",
-            body,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
             signal: controller.signal,
           }).finally(() => clearTimeout(timeout));
+
           const contentType = response.headers.get("content-type") || "";
           const raw = contentType.includes("application/json") ? await response.json() : await response.text();
+
           if (!response.ok) {
             return Response.json(
               { reply: `n8n fout ${response.status}: ${typeof raw === "string" ? raw : JSON.stringify(raw)}` },
               { status: response.status, headers: jsonHeaders },
             );
           }
+
           return Response.json(normalizeN8nResponse(raw), { headers: jsonHeaders });
         } catch (error) {
           const message = error instanceof Error && error.name === "AbortError"
-            ? "n8n duurde te lang om te antwoorden. Controleer of je workflow eindigt met een response."
+            ? "n8n duurde te lang om te antwoorden."
             : error instanceof Error
               ? error.message
               : "Onbekende n8n fout";
