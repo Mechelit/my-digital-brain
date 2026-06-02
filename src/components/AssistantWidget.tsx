@@ -244,7 +244,7 @@ export function AssistantWidget() {
               </div>
             </div>
             <div className="flex items-center gap-1">
-              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setTtsOn((v) => !v)} title={ttsOn ? "Spraak uit" : "Spraak aan"}>
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setTtsOn((v) => { const next = !v; if (!next && typeof window !== "undefined" && "speechSynthesis" in window) { try { window.speechSynthesis.cancel(); } catch {} } return next; })} title={ttsOn ? "Spraak uit" : "Spraak aan"}>
                 {ttsOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
               </Button>
               <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setOpen(false)}>
