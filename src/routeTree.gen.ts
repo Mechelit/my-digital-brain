@@ -22,6 +22,7 @@ import { Route as InvoiceIdRouteImport } from './routes/invoice.$id'
 import { Route as ApiN8nChatRouteImport } from './routes/api/n8n-chat'
 import { Route as ScanDesktopTokenRouteImport } from './routes/scan.desktop.$token'
 import { Route as ApiPublicHooksSyncGmailRouteImport } from './routes/api/public/hooks/sync-gmail'
+import { Route as ApiPublicHooksEcosystemEventRouteImport } from './routes/api/public/hooks/ecosystem-event'
 
 const ScanRoute = ScanRouteImport.update({
   id: '/scan',
@@ -88,6 +89,12 @@ const ApiPublicHooksSyncGmailRoute = ApiPublicHooksSyncGmailRouteImport.update({
   path: '/api/public/hooks/sync-gmail',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksEcosystemEventRoute =
+  ApiPublicHooksEcosystemEventRouteImport.update({
+    id: '/api/public/hooks/ecosystem-event',
+    path: '/api/public/hooks/ecosystem-event',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -102,6 +109,7 @@ export interface FileRoutesByFullPath {
   '/invoice/$id': typeof InvoiceIdRoute
   '/m/$token': typeof MTokenRoute
   '/scan/desktop/$token': typeof ScanDesktopTokenRoute
+  '/api/public/hooks/ecosystem-event': typeof ApiPublicHooksEcosystemEventRoute
   '/api/public/hooks/sync-gmail': typeof ApiPublicHooksSyncGmailRoute
 }
 export interface FileRoutesByTo {
@@ -117,6 +125,7 @@ export interface FileRoutesByTo {
   '/invoice/$id': typeof InvoiceIdRoute
   '/m/$token': typeof MTokenRoute
   '/scan/desktop/$token': typeof ScanDesktopTokenRoute
+  '/api/public/hooks/ecosystem-event': typeof ApiPublicHooksEcosystemEventRoute
   '/api/public/hooks/sync-gmail': typeof ApiPublicHooksSyncGmailRoute
 }
 export interface FileRoutesById {
@@ -133,6 +142,7 @@ export interface FileRoutesById {
   '/invoice/$id': typeof InvoiceIdRoute
   '/m/$token': typeof MTokenRoute
   '/scan/desktop/$token': typeof ScanDesktopTokenRoute
+  '/api/public/hooks/ecosystem-event': typeof ApiPublicHooksEcosystemEventRoute
   '/api/public/hooks/sync-gmail': typeof ApiPublicHooksSyncGmailRoute
 }
 export interface FileRouteTypes {
@@ -150,6 +160,7 @@ export interface FileRouteTypes {
     | '/invoice/$id'
     | '/m/$token'
     | '/scan/desktop/$token'
+    | '/api/public/hooks/ecosystem-event'
     | '/api/public/hooks/sync-gmail'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -165,6 +176,7 @@ export interface FileRouteTypes {
     | '/invoice/$id'
     | '/m/$token'
     | '/scan/desktop/$token'
+    | '/api/public/hooks/ecosystem-event'
     | '/api/public/hooks/sync-gmail'
   id:
     | '__root__'
@@ -180,6 +192,7 @@ export interface FileRouteTypes {
     | '/invoice/$id'
     | '/m/$token'
     | '/scan/desktop/$token'
+    | '/api/public/hooks/ecosystem-event'
     | '/api/public/hooks/sync-gmail'
   fileRoutesById: FileRoutesById
 }
@@ -195,6 +208,7 @@ export interface RootRouteChildren {
   ApiN8nChatRoute: typeof ApiN8nChatRoute
   InvoiceIdRoute: typeof InvoiceIdRoute
   MTokenRoute: typeof MTokenRoute
+  ApiPublicHooksEcosystemEventRoute: typeof ApiPublicHooksEcosystemEventRoute
   ApiPublicHooksSyncGmailRoute: typeof ApiPublicHooksSyncGmailRoute
 }
 
@@ -291,6 +305,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicHooksSyncGmailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/ecosystem-event': {
+      id: '/api/public/hooks/ecosystem-event'
+      path: '/api/public/hooks/ecosystem-event'
+      fullPath: '/api/public/hooks/ecosystem-event'
+      preLoaderRoute: typeof ApiPublicHooksEcosystemEventRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -316,8 +337,19 @@ const rootRouteChildren: RootRouteChildren = {
   ApiN8nChatRoute: ApiN8nChatRoute,
   InvoiceIdRoute: InvoiceIdRoute,
   MTokenRoute: MTokenRoute,
+  ApiPublicHooksEcosystemEventRoute: ApiPublicHooksEcosystemEventRoute,
   ApiPublicHooksSyncGmailRoute: ApiPublicHooksSyncGmailRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
