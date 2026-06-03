@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { Brain, Camera, Inbox, LayoutDashboard, LogOut, Wallet, Coins, FileText } from "lucide-react";
+import { Brain, Camera, Inbox, LayoutDashboard, LogOut, Wallet, Coins, FileText, Network } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ const SYNC_THROTTLE_MS = 2 * 60 * 1000; // max 1x per 2 minuten
 
 const nav = [
   { to: "/", icon: LayoutDashboard, label: "Brain" },
+  { to: "/ecosystem", icon: Network, label: "Ecosystem" },
   { to: "/scan", icon: Camera, label: "Scan" },
   { to: "/inbox", icon: Inbox, label: "Mail-inbox" },
   { to: "/accounts", icon: Wallet, label: "Rekeningen" },
