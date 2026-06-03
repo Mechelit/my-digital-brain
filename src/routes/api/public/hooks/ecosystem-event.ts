@@ -66,7 +66,7 @@ export const Route = createFileRoute("/api/public/hooks/ecosystem-event")({
           project_id: e.project_id ?? null,
           action: e.action,
           summary: e.summary,
-          metadata: e.metadata ?? {},
+          metadata: (e.metadata ?? {}) as never,
           source: e.source,
         });
         if (error) {
