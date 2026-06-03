@@ -44,6 +44,36 @@ export type Database = {
         }
         Relationships: []
       }
+      capabilities: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          reusable: boolean
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          reusable?: boolean
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          reusable?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       contracts: {
         Row: {
           counterparty: string | null
@@ -91,6 +121,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      decisions: {
+        Row: {
+          created_at: string
+          decision: string
+          id: string
+          impact: string | null
+          project_id: string | null
+          reasoning: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          decision: string
+          id?: string
+          impact?: string | null
+          project_id?: string | null
+          reasoning?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          decision?: string
+          id?: string
+          impact?: string | null
+          project_id?: string | null
+          reasoning?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decisions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       deposits: {
         Row: {
@@ -378,6 +449,90 @@ export type Database = {
         }
         Relationships: []
       }
+      project_capabilities: {
+        Row: {
+          capability_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          capability_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          capability_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_capabilities_capability_id_fkey"
+            columns: ["capability_id"]
+            isOneToOne: false
+            referencedRelation: "capabilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_capabilities_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          description: string | null
+          github_repo: string | null
+          id: string
+          lovable_project: string | null
+          name: string
+          priority: string
+          purpose: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          github_repo?: string | null
+          id?: string
+          lovable_project?: string | null
+          name: string
+          priority?: string
+          purpose?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          github_repo?: string | null
+          id?: string
+          lovable_project?: string | null
+          name?: string
+          priority?: string
+          purpose?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       recurring_expenses: {
         Row: {
           account_id: string | null
@@ -464,6 +619,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      workflows: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          platform: string
+          project_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          platform?: string
+          project_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          platform?: string
+          project_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflows_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
