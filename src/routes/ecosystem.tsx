@@ -62,6 +62,7 @@ function EcosystemPage() {
             <TabsTrigger value="decisions">Decisions</TabsTrigger>
             <TabsTrigger value="sandbox">Sandbox</TabsTrigger>
             <TabsTrigger value="activity">Activity</TabsTrigger>
+            <TabsTrigger value="intelligence">Intelligence</TabsTrigger>
           </TabsList>
           <TabsContent value="projects" className="mt-6"><ProjectsTab /></TabsContent>
           <TabsContent value="capabilities" className="mt-6"><CapabilitiesTab /></TabsContent>
@@ -71,6 +72,7 @@ function EcosystemPage() {
           <TabsContent value="decisions" className="mt-6"><DecisionsTab /></TabsContent>
           <TabsContent value="sandbox" className="mt-6"><SandboxTab /></TabsContent>
           <TabsContent value="activity" className="mt-6"><ActivityTab /></TabsContent>
+          <TabsContent value="intelligence" className="mt-6"><IntelligenceTab /></TabsContent>
         </Tabs>
       </div>
     </AppShell>
