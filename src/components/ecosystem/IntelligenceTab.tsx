@@ -29,7 +29,7 @@ type ProjectAsset = { project_id: string; asset_id: string };
 type ProjectCapability = { project_id: string; capability_id: string };
 type CapabilityAsset = { id: string; capability_id: string; asset_id: string };
 type RiskItem = { title: string; severity: "low" | "medium" | "high"; note?: string };
-type OpportunityItem = { title: string; impact: "low" | "medium" | "high"; note?: string };
+type OpportunityItem = { title: string; severity: "low" | "medium" | "high"; note?: string };
 type Intel = {
   id: string;
   project_id: string;
