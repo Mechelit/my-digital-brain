@@ -44,6 +44,78 @@ export type Database = {
         }
         Relationships: []
       }
+      activity_events: {
+        Row: {
+          action: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          metadata: Json | null
+          project_id: string | null
+          source: string
+          summary: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          metadata?: Json | null
+          project_id?: string | null
+          source?: string
+          summary: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          metadata?: Json | null
+          project_id?: string | null
+          source?: string
+          summary?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      assets: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       capabilities: {
         Row: {
           category: string | null
@@ -200,6 +272,45 @@ export type Database = {
           notes?: string | null
           paid_at?: string | null
           scan_path?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      features: {
+        Row: {
+          approved_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          project_id: string | null
+          retired_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          project_id?: string | null
+          retired_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          project_id?: string | null
+          retired_at?: string | null
+          status?: string
           updated_at?: string
           user_id?: string
         }
@@ -449,6 +560,33 @@ export type Database = {
         }
         Relationships: []
       }
+      project_assets: {
+        Row: {
+          asset_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       project_capabilities: {
         Row: {
           capability_id: string
@@ -577,6 +715,51 @@ export type Database = {
           notes?: string | null
           scope?: Database["public"]["Enums"]["expense_scope"]
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sandbox_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          estimated_build_time: string | null
+          estimated_cost: number | null
+          id: string
+          name: string
+          project_id: string | null
+          status: string
+          updated_at: string
+          used_assets: string[] | null
+          used_capabilities: string[] | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          estimated_build_time?: string | null
+          estimated_cost?: number | null
+          id?: string
+          name: string
+          project_id?: string | null
+          status?: string
+          updated_at?: string
+          used_assets?: string[] | null
+          used_capabilities?: string[] | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          estimated_build_time?: string | null
+          estimated_cost?: number | null
+          id?: string
+          name?: string
+          project_id?: string | null
+          status?: string
+          updated_at?: string
+          used_assets?: string[] | null
+          used_capabilities?: string[] | null
           user_id?: string
         }
         Relationships: []
