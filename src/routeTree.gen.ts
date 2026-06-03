@@ -13,6 +13,7 @@ import { Route as ScanRouteImport } from './routes/scan'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as FinancienRouteImport } from './routes/financien'
+import { Route as EcosystemRouteImport } from './routes/ecosystem'
 import { Route as ContractenRouteImport } from './routes/contracten'
 import { Route as AccountsRouteImport } from './routes/accounts'
 import { Route as IndexRouteImport } from './routes/index'
@@ -40,6 +41,11 @@ const InboxRoute = InboxRouteImport.update({
 const FinancienRoute = FinancienRouteImport.update({
   id: '/financien',
   path: '/financien',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EcosystemRoute = EcosystemRouteImport.update({
+  id: '/ecosystem',
+  path: '/ecosystem',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContractenRoute = ContractenRouteImport.update({
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/accounts': typeof AccountsRoute
   '/contracten': typeof ContractenRoute
+  '/ecosystem': typeof EcosystemRoute
   '/financien': typeof FinancienRoute
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
@@ -101,6 +108,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/accounts': typeof AccountsRoute
   '/contracten': typeof ContractenRoute
+  '/ecosystem': typeof EcosystemRoute
   '/financien': typeof FinancienRoute
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
@@ -116,6 +124,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/accounts': typeof AccountsRoute
   '/contracten': typeof ContractenRoute
+  '/ecosystem': typeof EcosystemRoute
   '/financien': typeof FinancienRoute
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
@@ -132,6 +141,7 @@ export interface FileRouteTypes {
     | '/'
     | '/accounts'
     | '/contracten'
+    | '/ecosystem'
     | '/financien'
     | '/inbox'
     | '/login'
@@ -146,6 +156,7 @@ export interface FileRouteTypes {
     | '/'
     | '/accounts'
     | '/contracten'
+    | '/ecosystem'
     | '/financien'
     | '/inbox'
     | '/login'
@@ -160,6 +171,7 @@ export interface FileRouteTypes {
     | '/'
     | '/accounts'
     | '/contracten'
+    | '/ecosystem'
     | '/financien'
     | '/inbox'
     | '/login'
@@ -175,6 +187,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountsRoute: typeof AccountsRoute
   ContractenRoute: typeof ContractenRoute
+  EcosystemRoute: typeof EcosystemRoute
   FinancienRoute: typeof FinancienRoute
   InboxRoute: typeof InboxRoute
   LoginRoute: typeof LoginRoute
@@ -213,6 +226,13 @@ declare module '@tanstack/react-router' {
       path: '/financien'
       fullPath: '/financien'
       preLoaderRoute: typeof FinancienRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ecosystem': {
+      id: '/ecosystem'
+      path: '/ecosystem'
+      fullPath: '/ecosystem'
+      preLoaderRoute: typeof EcosystemRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contracten': {
@@ -288,6 +308,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountsRoute: AccountsRoute,
   ContractenRoute: ContractenRoute,
+  EcosystemRoute: EcosystemRoute,
   FinancienRoute: FinancienRoute,
   InboxRoute: InboxRoute,
   LoginRoute: LoginRoute,
@@ -300,3 +321,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
