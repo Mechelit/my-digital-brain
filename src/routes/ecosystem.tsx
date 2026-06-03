@@ -19,6 +19,7 @@ import {
   FlaskConical, Activity as ActivityIcon, Plus,
 } from "lucide-react";
 import { toast } from "sonner";
+import { IntelligenceTab } from "@/components/ecosystem/IntelligenceTab";
 
 export const Route = createFileRoute("/ecosystem")({ component: EcosystemPage });
 
