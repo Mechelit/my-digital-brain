@@ -121,6 +121,7 @@ export type Database = {
           category: string | null
           created_at: string
           description: string | null
+          grouping: string | null
           id: string
           name: string
           reusable: boolean
@@ -130,6 +131,7 @@ export type Database = {
           category?: string | null
           created_at?: string
           description?: string | null
+          grouping?: string | null
           id?: string
           name: string
           reusable?: boolean
@@ -139,9 +141,37 @@ export type Database = {
           category?: string | null
           created_at?: string
           description?: string | null
+          grouping?: string | null
           id?: string
           name?: string
           reusable?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
+      capability_assets: {
+        Row: {
+          asset_id: string
+          capability_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          asset_id: string
+          capability_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          asset_id?: string
+          capability_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
           user_id?: string
         }
         Relationships: []
@@ -628,6 +658,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      project_intelligence: {
+        Row: {
+          created_at: string
+          data_sources: string[]
+          id: string
+          last_analyzed_at: string | null
+          opportunities: Json
+          project_id: string
+          risks: Json
+          summary: string | null
+          technologies: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_sources?: string[]
+          id?: string
+          last_analyzed_at?: string | null
+          opportunities?: Json
+          project_id: string
+          risks?: Json
+          summary?: string | null
+          technologies?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data_sources?: string[]
+          id?: string
+          last_analyzed_at?: string | null
+          opportunities?: Json
+          project_id?: string
+          risks?: Json
+          summary?: string | null
+          technologies?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       projects: {
         Row: {
