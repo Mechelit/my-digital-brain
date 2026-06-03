@@ -373,7 +373,7 @@ function StructuredListCard({
   const [draft, setDraft] = useState<{ title: string; severity: "low" | "medium" | "high"; note: string }>({
     title: "", severity: "medium", note: "",
   });
-  const key = severityLabel === "Ernst" ? "severity" : "impact";
+  const key = "severity";
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
