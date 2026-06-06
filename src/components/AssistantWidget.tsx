@@ -48,11 +48,24 @@ export function AssistantWidget() {
     try {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(t);
-      u.lang = "nl-NL";
-      u.rate = 1;
+      u.lang = "nl-BE";
+      u.rate = 0.98;
+      u.pitch = 1.05;
       const voices = window.speechSynthesis.getVoices();
-      const nl = voices.find((v) => v.lang?.toLowerCase().startsWith("nl"));
-      if (nl) u.voice = nl;
+      const isFemale = (name: string) => /ellen|sofie|hanne|femke|lotte|anke|saskia|claire|nicolette|female|vrouw|google nederlands/i.test(name);
+      // 1. Vlaamse vrouwelijke stem
+      let pick =
+        voices.find((v) => v.lang?.toLowerCase() === "nl-be" && isFemale(v.name)) ||
+        // 2. Elke nl-BE stem (vaak Ellen, vrouwelijk op macOS/Windows)
+        voices.find((v) => v.lang?.toLowerCase() === "nl-be") ||
+        // 3. Nederlandse vrouwelijke stem als fallback
+        voices.find((v) => v.lang?.toLowerCase().startsWith("nl") && isFemale(v.name)) ||
+        // 4. Elke Nederlandse stem
+        voices.find((v) => v.lang?.toLowerCase().startsWith("nl"));
+      if (pick) {
+        u.voice = pick;
+        u.lang = pick.lang;
+      }
       window.speechSynthesis.speak(u);
     } catch {}
   }, [ttsOn]);
