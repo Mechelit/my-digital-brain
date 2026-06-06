@@ -127,28 +127,52 @@ export function AssistantWidget() {
         }),
       });
 
-      const ct = res.headers.get("content-type") || "";
-      let data: any = null;
-      if (ct.includes("application/json")) data = await res.json();
-      else {
-        const txt = await res.text();
-        try { data = JSON.parse(txt); } catch { data = txt; }
+      if (!res.ok || !res.body) {
+        const errText = await res.text().catch(() => `HTTP ${res.status}`);
+        throw new Error(errText || `HTTP ${res.status}`);
       }
-      if (!res.ok) throw new Error(typeof data === "string" ? data : `HTTP ${res.status}`);
 
-      const payload = Array.isArray(data) ? data[0] : data;
-      const reply =
-        payload?.reply ??
-        payload?.text ??
-        payload?.output ??
-        (typeof payload === "string" ? payload : "");
+      // Create a placeholder assistant message we will append to as chunks arrive
+      const assistantId = uid();
+      setMessages((m) => [...m, { id: assistantId, role: "assistant", text: "", ts: Date.now() }]);
 
-      if (reply) {
-        setMessages((m) => [...m, { id: uid(), role: "assistant", text: String(reply), ts: Date.now() }]);
-        speak(String(reply));
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        if (!chunk) continue;
+        buffer += chunk;
+        setMessages((m) =>
+          m.map((msg) => (msg.id === assistantId ? { ...msg, text: (msg.text || "") + chunk } : msg)),
+        );
+      }
+      buffer += decoder.decode();
+
+      // If upstream returned JSON instead of plain text, extract the reply field
+      const trimmed = buffer.trim();
+      let finalText = buffer;
+      if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]"))) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          const payload = Array.isArray(parsed) ? parsed[0] : parsed;
+          const reply = payload?.reply ?? payload?.text ?? payload?.message ?? payload?.output ?? "";
+          if (reply) {
+            finalText = String(reply);
+            setMessages((m) => m.map((msg) => (msg.id === assistantId ? { ...msg, text: finalText } : msg)));
+          }
+        } catch {}
+      }
+
+      if (!finalText.trim()) {
+        setMessages((m) => m.map((msg) => (msg.id === assistantId ? { ...msg, text: "Verzonden ✓" } : msg)));
       } else {
-        setMessages((m) => [...m, { id: uid(), role: "assistant", text: "Verzonden ✓", ts: Date.now() }]);
+        speak(finalText);
       }
+
     } catch (e: any) {
       const message = e?.message === "Failed to fetch"
         ? "Kan MILA niet bereiken. Controleer of de workflow live staat."
