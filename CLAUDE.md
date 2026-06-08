@@ -81,11 +81,14 @@ Test: chat-endpoint antwoordt; assistant-widget toont respons; todos koppelen.
 
 ## Technische regels
 - Supabase: altijd public schema. Custom schema enkel via HTTP Request + `Accept-Profile` header.
+- AI-laag draait op de **directe Claude API** (`https://api.anthropic.com/v1/messages`), niet via een Lovable/derde-partij gateway. Eén helper: `src/lib/claude.ts` (`extractJsonWithClaude`). Sleutel: `CLAUDE_API_KEY` (server-side env / Cloudflare secret). Headers: `x-api-key` + `anthropic-version: 2023-06-01`.
 - Claude-modellen verifiëren via web search vóór gebruik. Geldig nu: `claude-opus-4-8`, `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`. Haiku 4.6/4.7/4.8 bestaan niet.
+- Lovable nog enkel als Gmail-connector (`connector-gateway.lovable.dev`, `LOVABLE_API_KEY` + `GOOGLE_MAIL_API_KEY`) in node 3 — open vraag of we die ook vervangen.
 - Mem0 body: `{"messages":[{"role":"user","content":"..."}],"user_id":"mila-sovereign-user"}`
 - `src/integrations/supabase/types.ts` en `src/integrations/supabase/client.ts` zijn gegenereerd — niet handmatig editen.
 - Geen secrets committen. `.env` blijft lokaal/gitignored.
 - Nooit verder naar de volgende node als de huidige niet werkt.
 
 ## Sessielog
+- 2026-06-08 — AI-laag van Lovable-gateway naar directe Claude API gemigreerd op beslissing van Iris (geen tussenpartij, goedkoper, volledige controle). Eén gedeelde helper `src/lib/claude.ts`; vijf call-sites omgezet: `invoice-ai.functions.ts`, `invoices.functions.ts`, `mobile-scan.functions.ts`, `gmail.functions.ts` en de hook `api/public/hooks/sync-gmail.ts`. Model `claude-sonnet-4-6`, base64 image/PDF-blocks. Nieuwe sleutel `CLAUDE_API_KEY` vereist. Niet kunnen draaien/testen in deze omgeving (geen API-key, package-registry afgeschermd) → nodes 2/3/5/8 blijven in progress (niet geverifieerd). Gmail-connector loopt nog via Lovable.
 - 2026-06-07 — CTO-agent geïnitialiseerd. Codebase verkend (TanStack Start + Supabase + Cloudflare + Lovable). CLAUDE.md aangemaakt als ruggengraat, met de 8 bestaande feature-gebieden als nodes. Open vraag genoteerd: Cloudflare/Lovable vs de standaard Vercel-stack. Nog niets gebouwd of getest in deze sessie.

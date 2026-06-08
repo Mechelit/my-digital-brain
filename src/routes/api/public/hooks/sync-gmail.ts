@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { extractJsonWithClaude } from "@/lib/claude";
 
 const GMAIL_GATEWAY = "https://connector-gateway.lovable.dev/google_mail/gmail/v1";
-const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 const SYSTEM_PROMPT = `You are an expert at reading Belgian invoices, payment letters, and bills. Extract structured payment data.
 
@@ -96,26 +96,15 @@ export const Route = createFileRoute("/api/public/hooks/sync-gmail")({
             const scanPath = `${userId}/gmail/${messageId}-${pdf.filename.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
             await admin.storage.from("invoice-scans").upload(scanPath, bytes, { contentType: "application/pdf", upsert: true });
 
-            const dataUrl = `data:application/pdf;base64,${bytes.toString("base64")}`;
-            const aiRes = await fetch(AI_GATEWAY, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "Lovable-API-Key": lov },
-              body: JSON.stringify({
-                model: "google/gemini-2.5-flash",
-                messages: [
-                  { role: "system", content: SYSTEM_PROMPT },
-                  { role: "user", content: [
-                    { type: "text", text: `Subject: ${subject}\nFrom: ${from}` },
-                    { type: "image_url", image_url: { url: dataUrl } },
-                  ]},
-                ],
-                response_format: { type: "json_object" },
-              }),
-            });
             let parsed: any = {};
-            if (aiRes.ok) {
-              const j = await aiRes.json();
-              try { parsed = JSON.parse(j.choices?.[0]?.message?.content ?? "{}"); } catch {}
+            try {
+              parsed = await extractJsonWithClaude({
+                system: SYSTEM_PROMPT,
+                text: `Subject: ${subject}\nFrom: ${from}`,
+                attachment: { base64: bytes.toString("base64"), mimeType: "application/pdf" },
+              });
+            } catch (e) {
+              console.error("claude extract error", messageId, e);
             }
 
             await admin.from("invoices").insert({

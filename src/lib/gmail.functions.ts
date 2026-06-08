@@ -1,9 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { extractJsonWithClaude } from "@/lib/claude";
 
 const GMAIL_GATEWAY = "https://connector-gateway.lovable.dev/google_mail/gmail/v1";
-const AI_GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 const SYSTEM_PROMPT = `You are an expert at reading Belgian invoices, payment letters, bills, refunds and credit notes. Extract structured payment data from the PDF/image.
 
@@ -76,8 +76,6 @@ export const syncGmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY ontbreekt");
 
     // Zoek recente mails: factuur/rekening/invoice/credit/refund of van Doccle (met of zonder PDF)
     const query = encodeURIComponent('newer_than:90d (from:doccle.be OR from:doccle.com OR from:doccle.eu OR doccle OR ((has:attachment filename:pdf) AND (subject:factuur OR subject:rekening OR subject:invoice OR subject:receipt OR subject:creditnota OR subject:"credit note" OR subject:refund OR subject:terugbetaling)))');
@@ -131,26 +129,15 @@ export const syncGmail = createServerFn({ method: "POST" })
           scanPath = `${userId}/gmail/${messageId}-${pdf.filename.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
           await supabase.storage.from("invoice-scans").upload(scanPath, bytes, { contentType: "application/pdf", upsert: true });
 
-          const dataUrl = `data:application/pdf;base64,${bytes.toString("base64")}`;
-          const aiRes = await fetch(AI_GATEWAY, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
-            body: JSON.stringify({
-              model: "google/gemini-2.5-flash",
-              messages: [
-                { role: "system", content: SYSTEM_PROMPT },
-                { role: "user", content: [
-                  { type: "text", text: `Email subject: ${subject}\nFrom: ${from}\n\nExtract payment data from this PDF.` },
-                  { type: "image_url", image_url: { url: dataUrl } },
-                ]},
-              ],
-              response_format: { type: "json_object" },
-            }),
-          });
-          if (aiRes.ok) {
-            const j = await aiRes.json();
-            try { parsed = ExtractionSchema.parse(JSON.parse(j.choices?.[0]?.message?.content ?? "{}")); } catch {}
-          }
+          try {
+            parsed = ExtractionSchema.parse(
+              await extractJsonWithClaude({
+                system: SYSTEM_PROMPT,
+                text: `Email subject: ${subject}\nFrom: ${from}\n\nExtract payment data from this PDF.`,
+                attachment: { base64: bytes.toString("base64"), mimeType: "application/pdf" },
+              }),
+            );
+          } catch {}
         }
 
         const isRefund = !!parsed.is_refund || /credit\s*nota|creditnota|refund|terugbetal/i.test(subject);

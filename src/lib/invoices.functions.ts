@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { extractJsonWithClaude } from "@/lib/claude";
 
 const ExtractionSchema = z.object({
   supplier: z.string().nullable().optional(),
@@ -38,43 +39,16 @@ export const extractInvoice = createServerFn({ method: "POST" })
   .inputValidator((input: { imageBase64: string; mimeType: string; scanPath: string }) => input)
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY ontbreekt");
-
-    const dataUrl = `data:${data.mimeType};base64,${data.imageBase64}`;
-
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Lovable-API-Key": apiKey,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: "Extract the payment data from this Belgian bill/invoice." },
-              { type: "image_url", image_url: { url: dataUrl } },
-            ],
-          },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    });
-
-    if (res.status === 429) throw new Error("AI gateway: rate limit bereikt, probeer zo nog eens.");
-    if (res.status === 402) throw new Error("AI gateway: credits op. Voeg credits toe in workspace settings.");
-    if (!res.ok) throw new Error(`AI gateway fout: ${res.status} ${await res.text()}`);
-
-    const json = await res.json();
-    const content: string = json.choices?.[0]?.message?.content ?? "{}";
 
     let parsed: InvoiceExtraction;
     try {
-      parsed = ExtractionSchema.parse(JSON.parse(content));
+      parsed = ExtractionSchema.parse(
+        await extractJsonWithClaude({
+          system: SYSTEM_PROMPT,
+          text: "Extract the payment data from this Belgian bill/invoice.",
+          attachment: { base64: data.imageBase64, mimeType: data.mimeType },
+        }),
+      );
     } catch {
       parsed = {};
     }

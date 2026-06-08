@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { extractJsonWithClaude } from "@/lib/claude";
 
 const SYSTEM_PROMPT = `You are an expert at reading Belgian invoices, payment letters, bills, credit notes and refunds.
 Return ONLY a JSON object with these fields (use null when missing):
@@ -58,8 +59,6 @@ export const mobileScanExtract = createServerFn({ method: "POST" })
   .inputValidator((i: { token: string; imageBase64: string; mimeType: string }) => i)
   .handler(async ({ data }) => {
     const session = await loadSession(data.token);
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY ontbreekt");
 
     // Upload to storage as the owner
     const ext = (data.mimeType.split("/")[1] || "jpg").split("+")[0];
@@ -70,31 +69,16 @@ export const mobileScanExtract = createServerFn({ method: "POST" })
       .upload(path, buffer, { contentType: data.mimeType, upsert: false });
     if (upErr) throw new Error(`Upload mislukt: ${upErr.message}`);
 
-    // AI extract
-    const dataUrl = `data:${data.mimeType};base64,${data.imageBase64}`;
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: "Extract the payment data from this Belgian bill/invoice." },
-              { type: "image_url", image_url: { url: dataUrl } },
-            ],
-          },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    });
-    if (!res.ok) throw new Error(`AI fout: ${res.status}`);
-    const json = await res.json();
+    // AI extract via directe Claude API
     let parsed: z.infer<typeof Extraction> = {};
     try {
-      parsed = Extraction.parse(JSON.parse(json.choices?.[0]?.message?.content ?? "{}"));
+      parsed = Extraction.parse(
+        await extractJsonWithClaude({
+          system: SYSTEM_PROMPT,
+          text: "Extract the payment data from this Belgian bill/invoice.",
+          attachment: { base64: data.imageBase64, mimeType: data.mimeType },
+        }),
+      );
     } catch {}
 
     const { data: inserted, error } = await supabaseAdmin
